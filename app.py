@@ -53,8 +53,23 @@ class NeuroMirror:
         self.model = model
     
     def chat():
-        pass
+        messages = [
+            {"role": "user", "content": ""},
+            {"role": "assistant", "content": ""},
+            {"role": "user", "content": ""},
+            {"role": "assistant", "content": ""},
 
+        ]
+        while True:
+            query = input("You: ")
+            if query.lower() in ["exit", "quit"]:
+                print("Bye I hope you learned something new today!")
+                break
+            else:
+                response : ChatResponse = chat(
+                    model
+
+                )
 
 # NEED TO USE LLM WAY RATHER THAN AGENT WAY
 
