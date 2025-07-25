@@ -3,6 +3,10 @@ from transformers import AutoModelForImageTextToText, AutoTokenizer,pipeline
 import torch
 import logging
 
+# Importing Ollama
+from run_ollama import chat
+from run_ollama import ChatResponse
+
 model_name = "google/gemma-3n-E4B-it"
 
 logger = logging.getLogger(__name__)
@@ -13,43 +17,6 @@ model = AutoModelForImageTextToText.from_pretrained(
     torch_dtype=torch.float16,
     device_map="auto"
 )
-
-device_count = torch.cuda.device_count()
-if device_count > 0:
-    logger.debug("Select GPU device")
-    device = torch.device("cuda")
-else:
-    logger.debug("Select CPU device")
-    device = torch.device("cpu")
-
-model = model.to(device)
-
-def inference(text, model, tokenizer, max_input_tokens=1000, max_output_tokens=100):
-    # Tokenize
-    input_ids = tokenizer.encode(
-    text,
-    return_tensors="pt",
-    truncation=True,
-    max_length=max_input_tokens
-    )
-    # Generate
-    device = model.device
-    generated_tokens_with_prompt = model.generate(
-        input_ids=input_ids.to(device),
-        max_length=max_output_tokens
-    )
-    # Decode
-    generated_text_with_prompt = tokenizer.batch_decode(generated_tokens_with_prompt, skip_special_tokens=True)
-
-    generated_text_answer = generated_text_with_prompt[0][len(text):]
-
-    return generated_text_answer
-
-
-output_text = inference("Hello, how are you?", model, tokenizer)
-
-print("Output:", output_text)
-
 
 system_prompt = """
 You are OfflineLearn, an AI-powered personalized education assistant designed specifically for students and teachers in low-connectivity regions worldwide. Your mission is to democratize quality education by providing adaptive, culturally relevant, and resource-conscious learning experiences that work entirely offline.
@@ -261,3 +228,46 @@ Every interaction should leave students more confident, knowledgeable, and excit
 
 
  """
+
+
+device_count = torch.cuda.device_count()
+if device_count > 0:
+    logger.debug("Select GPU device")
+    device = torch.device("cuda")
+else:
+    logger.debug("Select CPU device")
+    device = torch.device("cpu")
+
+model = model.to(device)
+
+
+
+class Offline_Learner:
+    def __init__(self,model,tokenizer,user_query,system_prompt):
+        self.model = model,
+        self.tokenizer = tokenizer
+        self.system_prompt = system_prompt
+
+
+    def chat_template(self):
+        # Prepare messages with system prompt and user query
+
+        messages = [
+            {
+                "role": "assistant", "content": 
+             [
+                {
+                    "type": "text","text": self.system_prompt,
+                }
+             ]
+            },
+
+            {
+                "role": "user", "content": [
+                    {
+                        "type": "text", "text": f"User Query:{self.user_query}" ,                  }
+                
+            ]
+            }
+
+        ]
