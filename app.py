@@ -7,16 +7,8 @@ from run_ollama import chat
 from run_ollama import ChatResponse
 
 # can use
-from unsloth import FastModel
 import torch
-model, tokenizer = FastModel.from_pretrained(
-    model_name = "unsloth/gemma-3n-E4B-it", # Or "unsloth/gemma-3n-E2B-it"
-    dtype = None, # None for auto detection
-    max_seq_length = 1024, # Choose any for long context!
-    load_in_4bit = True,  # 4 bit quantization to reduce memory
-    full_finetuning = False, # [NEW!] We have full finetuning now!
-    # token = "hf_...", # use one if using gated models
-)
+
 from transformers import TextStreamer
 import gc
 # Helper function for inference
@@ -80,7 +72,7 @@ class NeuroMirror:
         logger.debug("Select CPU device")
         device = torch.device("cpu")
 
-        
+
     def inference(text, model, tokenizer, max_input_tokens=1000, max_output_tokens=100):
         #Tokenize
         input_ids = tokenizer.encode(
