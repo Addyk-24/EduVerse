@@ -253,13 +253,13 @@ model = model.to(device)
 
 
 class Offline_Learner:
-    def __init__(self,model,tokenizer,user_query,system_prompt):
+    def __init__(self,model,tokenizer,system_prompt):
         self.model = model,
         self.tokenizer = tokenizer
         self.system_prompt = system_prompt
 
 
-    def chat_template(self):
+    def chat_template(self,user_query: str):
         # Prepare messages with system prompt and user query
 
         messages = [
@@ -275,7 +275,7 @@ class Offline_Learner:
             {
                 "role": "user", "content": [
                     {
-                        "type": "text", "text": f"User Query:{self.user_query}" ,                  }
+                        "type": "text", "text": f"User Query:{user_query}" ,                  }
                 
             ]
             }
@@ -294,3 +294,10 @@ class Offline_Learner:
         response = self.tokenizer.decode(chat_output[:,input_len:],skip_special_tokens=True)[0]
 
         return response
+
+
+offline_learn = Offline_Learner()
+
+prompt = "Generate a math problem for 5th grade students in rural India, using local currency and context. Provide a step-by-step solution and real-world application."
+response = offline_learn.chat_template(prompt)
+print(response)
