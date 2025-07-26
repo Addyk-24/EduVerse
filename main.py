@@ -2,20 +2,17 @@
 from transformers import AutoModelForImageTextToText, AutoTokenizer,pipeline
 import torch
 import logging
+import transformers
 
-import torch
 import requests
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForImageTextToText
 from io import BytesIO
-import logging
 from typing import Union, Tuple
 from dataclasses import dataclass
 import os
 
-# Importing Ollama
-from run_ollama import chat
-from run_ollama import ChatResponse
+
 
 model_name = "google/gemma-3n-E4B-it"
 
@@ -241,16 +238,25 @@ Every interaction should leave students more confident, knowledgeable, and excit
 
 class Offline_Learner:
     def __init__(self,model,tokenizer,system_prompt):
-        self.model = model,
+        self.model = model
         self.tokenizer = tokenizer
         self.system_prompt = system_prompt
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.processor = AutoProcessor.from_pretrained(model_name)
 
 
-    def chat_template(self,user_query: str):
+    def chat_template(self,user_query: str,max_tokens=256):
         # Prepare messages with system prompt and user query
 
         messages = [
+
+            {
+                "role": "user", "content": [
+                    {
+                        "type": "text", "text": f"User Query:{user_query}" ,                  }
+                
+            ]
+            },
             {
                 "role": "assistant", "content": 
              [
@@ -260,31 +266,30 @@ class Offline_Learner:
              ]
             },
 
-            {
-                "role": "user", "content": [
-                    {
-                        "type": "text", "text": f"User Query:{user_query}" ,                  }
-                
-            ]
-            }
-
         ]
         # Apply chat template
 
-        chat_input : ChatResponse = chat(
-            model=self.model,
-            messages=messages,
-            tokenizer=self.tokenizer,
-            return_tensors="pt",
+        input = self.processor.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            tokenize=True,
+            return_dict=True,
+            return_tensors="pt"
         ).to(self.model.device)
-        input_len = chat_input["input_ids"].shape[-1]
-        chat_output = self.model.generate(**chat_input)
-        response = self.tokenizer.decode(chat_output[:,input_len:],skip_special_tokens=True)[0]
+
+        input_len = input["input_ids"].shape[-1]
+
+        output = self.model.generate(
+            **input,
+            max_new_tokens=max_tokens,
+            disable_compile=True
+    )
+        response = self.processor.batch_decode(output[:,input_len:],skip_special_tokens=True)[0]
 
         return response
 
 
-offline_learn = Offline_Learner()
+offline_learn = Offline_Learner(model,tokenizer, system_prompt)
 
 prompt = "Generate a math problem for 5th grade students in rural India, using local currency and context. Provide a step-by-step solution and real-world application."
 response = offline_learn.chat_template(prompt)
