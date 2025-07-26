@@ -3,6 +3,16 @@ from transformers import AutoModelForImageTextToText, AutoTokenizer,pipeline
 import torch
 import logging
 
+import torch
+import requests
+from PIL import Image
+from transformers import AutoProcessor, AutoModelForImageTextToText
+from io import BytesIO
+import logging
+from typing import Union, Tuple
+from dataclasses import dataclass
+import os
+
 # Importing Ollama
 from run_ollama import chat
 from run_ollama import ChatResponse
@@ -271,3 +281,16 @@ class Offline_Learner:
             }
 
         ]
+        # Apply chat template
+
+        chat_input : ChatResponse = chat(
+            model=self.model,
+            messages=messages,
+            tokenizer=self.tokenizer,
+            return_tensors="pt",
+        ).to(self.model.device)
+        input_len = chat_input["input_ids"].shape[-1]
+        chat_output = self.model.generate(**chat_input)
+        response = self.tokenizer.decode(chat_output[:,input_len:],skip_special_tokens=True)[0]
+
+        return response
