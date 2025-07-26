@@ -73,8 +73,7 @@ OfflineLearn bridges this gap by providing an **AI-powered educational assistant
 - Python 3.8 or higher
 - 8GB RAM minimum (16GB recommended)
 - 50GB available storage
-- Ollama installed
-
+- 
 ### Installation
 
 1. **Clone the repository:**
@@ -86,18 +85,6 @@ cd offlinelearn
 2. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
-```
-
-3. **Set up Ollama:**
-```bash
-# Install Ollama (if not already installed)
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Start Ollama service
-ollama serve
-
-# Pull the base Gemma model
-ollama pull gemma2:27b
 ```
 
 4. **Create OfflineLearn model:**
