@@ -63,11 +63,9 @@ OfflineLearn bridges this gap by providing an **AI-powered educational assistant
 
 ## 🛠️ Technology Stack
 
-- **AI Model**: Gemma 3n (27B parameters) via Ollama
-- **Backend**: Python with FastAPI
-- **Frontend**: Streamlit for web interface
+- **AI Model**: Gemma 3n (27B parameters)
+- **Backend**: Python with transformers
 - **Database**: SQLite for offline data storage
-- **Deployment**: Docker containers for easy setup
 
 ## 📦 Quick Start
 
