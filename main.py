@@ -25,7 +25,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForImageTextToText.from_pretrained(
     model_name,
     torch_dtype=torch.float16,
-    device_map="auto"
+    device_map= torch.device("cuda" if torch.cuda.is_available() else "cpu")
 )
 
 system_prompt = """
@@ -239,24 +239,12 @@ Every interaction should leave students more confident, knowledgeable, and excit
 
  """
 
-
-device_count = torch.cuda.device_count()
-if device_count > 0:
-    logger.debug("Select GPU device")
-    device = torch.device("cuda")
-else:
-    logger.debug("Select CPU device")
-    device = torch.device("cpu")
-
-model = model.to(device)
-
-
-
 class Offline_Learner:
     def __init__(self,model,tokenizer,system_prompt):
         self.model = model,
         self.tokenizer = tokenizer
         self.system_prompt = system_prompt
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
     def chat_template(self,user_query: str):
