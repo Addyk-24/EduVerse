@@ -298,7 +298,15 @@ class Offline_Learner:
                     "type": "text","text": self.system_prompt,
                 }
              ]
-            },
+            }
+            # {
+            #     "role" : "user",
+            #     "content":
+            #     [
+            #         { "type": "image", "image" : {image}},
+            #         { "type": "text",  "text" : "Which films does this animal feature in?" }
+            #     ]
+            # },
 
         ]
         # Apply chat template
