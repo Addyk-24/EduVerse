@@ -1,4 +1,4 @@
-# 🎓 OfflineLearn: AI-Powered Education for Everyone
+# 🎓 EduVerse:"Your Personal Learning Universe, Anywhere"
 
 > *Democratizing quality education through offline-first, culturally adaptive AI tutoring*
 
@@ -10,9 +10,9 @@
 
 **263 million children worldwide lack access to quality education.** Many live in low-connectivity regions where traditional online educational tools fail. Teachers often lack resources and training, while students struggle with content that doesn't reflect their cultural context or practical needs.
 
-OfflineLearn bridges this gap by providing an **AI-powered educational assistant that works entirely offline**, adapts to local cultures, and requires minimal resources.
+EduVerse bridges this gap by providing an **AI-powered educational assistant that works entirely offline**, adapts to local cultures, and requires minimal resources.
 
-## ✨ What Makes OfflineLearn Different
+## ✨ What Makes EduVerse Different
 
 ### 🔄 **Adaptive Learning Engine**
 - Dynamically adjusts difficulty based on student performance
@@ -78,8 +78,8 @@ OfflineLearn bridges this gap by providing an **AI-powered educational assistant
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/offlinelearn.git
-cd offlinelearn
+git clone https://github.com/yourusername/EduVerse.git
+cd EduVerse
 ```
 
 2. **Install dependencies:**
@@ -87,10 +87,10 @@ cd offlinelearn
 pip install -r requirements.txt
 ```
 
-4. **Create OfflineLearn model:**
+4. **Create EduVerse model:**
 ```bash
 # Create custom model with our educational prompt
-ollama create offlinelearn -f Modelfile
+ollama create EduVerse -f Modelfile
 ```
 
 5. **Initialize the database:**
@@ -114,7 +114,7 @@ Open your browser to `http://localhost:8501`
 ```
 Student: "I don't understand how to solve 2x + 5 = 13"
 
-OfflineLearn: "I can see you're working with an equation! Let me ask you this: 
+EduVerse: "I can see you're working with an equation! Let me ask you this: 
 What do you think our goal is when we have an equation like this? What are we 
 trying to find?"
 
@@ -125,7 +125,7 @@ trying to find?"
 ```
 Request: "Generate 3 fraction problems for grade 6 students in rural Kenya"
 
-OfflineLearn: Creates problems about:
+EduVerse: Creates problems about:
 - Dividing farmland between family members
 - Calculating portions of maize harvest
 - Sharing water containers in the community
@@ -157,7 +157,7 @@ Upload student work → Receive detailed analysis:
 ## 📁 Project Structure
 
 ```
-offlinelearn/
+EduVerse/
 ├── 📄 README.md
 ├── 📄 requirements.txt
 ├── 📄 Modelfile                 # Ollama model configuration
@@ -217,7 +217,7 @@ offlinelearn/
 
 ## 🌐 Cultural Adaptation
 
-OfflineLearn automatically adapts content for different regions:
+EduVerse automatically adapts content for different regions:
 
 ### Supported Contexts
 - **🌾 Rural farming communities** (Kenya, Tanzania, India, etc.)
