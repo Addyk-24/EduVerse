@@ -244,6 +244,40 @@ class Offline_Learner:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = AutoProcessor.from_pretrained(model_name)
 
+    def preprocess_image(self, image: Image.Image) -> Image.Image:
+        """ Resize and converting image to RGB """ 
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+
+        # resize the image to Gemma 3n accepted size ie 512x512
+        target_size = (512,512)
+        # Calculate aspect ratio preserving resize
+        original_width, original_height = image.size
+        aspect_ratio = original_width / original_height
+        if aspect_ratio > 1:
+            # Width is larger
+            new_width = target_size[0]
+            new_height = int(target_size[0] / aspect_ratio)
+        else:
+            # Height is larger or equal
+            new_height = target_size[1]
+            new_width = int(target_size[1] * aspect_ratio)
+        # Resize image maintaining aspect ratio
+        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        # Create a new image with target size and paste the resized image
+        processed_image = Image.new(
+            "RGB", target_size, (255, 255, 255)
+        )  # White background
+
+        # Calculate position to center the image
+        x_offset = (target_size[0] - new_width) // 2
+        y_offset = (target_size[1] - new_height) // 2
+
+        processed_image.paste(image, (x_offset, y_offset))
+
+        return processed_image
+
 
     def chat_template(self,user_query: str,max_tokens=256):
         # Prepare messages with system prompt and user query
@@ -291,6 +325,6 @@ class Offline_Learner:
 
 offline_learn = Offline_Learner(model,tokenizer, system_prompt)
 
-prompt = "Generate a math problem for 5th grade students in rural India, using local currency and context. Provide a step-by-step solution and real-world application."
+prompt = "Create a 45-minute science lesson about photosynthesis for grade 7, limited resources, rural Tanzania"
 response = offline_learn.chat_template(prompt)
 print(response)
