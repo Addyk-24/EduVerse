@@ -233,6 +233,12 @@ Remember: You are serving communities that may have limited educational resource
 
 Every interaction should leave students more confident, knowledgeable, and excited about learning.
 
+ TASKS:
+1. Automatically determine the input type: image or text.
+2. For images, resize and convert to RGB format.
+3. For text, apply the chat template with the system prompt.
+
+
 
  """
 
@@ -244,7 +250,7 @@ class Offline_Learner:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = AutoProcessor.from_pretrained(model_name)
 
-    def preprocess_image(self, image: Image.Image) -> Image.Image:
+    def preprocess_image(image: Image.Image) -> Image.Image:
         """ Resize and converting image to RGB """ 
         if image.mode != 'RGB':
             image = image.convert('RGB')
@@ -277,10 +283,54 @@ class Offline_Learner:
         processed_image.paste(image, (x_offset, y_offset))
 
         return processed_image
+    
+    def detect_input_type(user_query):
+        if isinstance(user_query, str) and user_query.endswith(('.png', '.jpg', '.jpeg')):
+            # if user_query is path to an image. load image
+            return "image"
+        elif isinstance(user_query,str) and user_query.endswith(('.mp4', '.avi', '.mov')):
+            print("Video input is not supported yet. Please provide an image or text query.")
+    
+    def format_input_type(input_type, raw_input):
+        """
+        Formats input data for image, audio (simulated), or text.
+        Supports both local paths and URLs for images. Displays image if loaded.
+        """
+        if input_type == "image":
+            try:
+                if raw_input.startswith("http://") or raw_input.startswith("https://"):
+                    response = requests.get(raw_input)
+                    response.raise_for_status()
+                    image = Image.open(BytesIO(response.content))
+                    image = preprocess_image(image)
+                else:
+                    image = Image.open(raw_input).convert("RGB")
+                
+                print("Image Loaded")
 
 
+            except Exception as e:
+                raise ValueError(f"Failed to load image from {raw_input}: {e}")
+
+        # if input_type == "image":
+        #     try:
+        #         if raw_input.startswith("http://") or raw_input.startswith("https://"):
+        #             response = requests.get(raw_input)
+        #             response.raise_for_status()
+        #             image = Image.open(BytesIO(response.content)).convert("RGB")
+        #         else:
+        #             image = Image.open(raw_input).convert("RGB")
+
+        #         print("Image loaded successfully. Preview below:")
+        #         display_resized_image(image, width_px=300)
+
+        #         return image
+        #     except Exception as e:
+        #         raise ValueError(f"Failed to load image from {raw_input}: {e}")
     def chat_template(self,user_query: str,max_tokens=256):
-        # Prepare messages with system prompt and user query
+        """ Prepare messages with system prompt and user query"""
+
+
 
         messages = [
 
