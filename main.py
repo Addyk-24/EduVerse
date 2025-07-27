@@ -249,7 +249,7 @@ class Offline_Learner:
         self.system_prompt = system_prompt
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = AutoProcessor.from_pretrained(model_name)
-
+    
     def preprocess_image(image: Image.Image) -> Image.Image:
         """ Resize and converting image to RGB """ 
         if image.mode != 'RGB':
@@ -284,14 +284,16 @@ class Offline_Learner:
 
         return processed_image
     
-    def detect_input_type(user_query):
-        if isinstance(user_query, str) and user_query.endswith(('.png', '.jpg', '.jpeg')):
+    # Detection of input type
+    def detect_input_type(input_data):
+        if isinstance(input_data, str) and input_data.endswith(('.png', '.jpg', '.jpeg')):
             # if user_query is path to an image. load image
             return "image"
-        elif isinstance(user_query,str) and user_query.endswith(('.mp4', '.avi', '.mov')):
+        elif isinstance(input_data,str) and input_data.endswith(('.mp4', '.avi', '.mov')):
             print("Video input is not supported yet. Please provide an image or text query.")
     
-    def format_input_type(input_type, raw_input):
+
+    def format_input_type(self,input_type, raw_input):
         """
         Formats input data for image, audio (simulated), or text.
         Supports both local paths and URLs for images. Displays image if loaded.
@@ -302,7 +304,7 @@ class Offline_Learner:
                     response = requests.get(raw_input)
                     response.raise_for_status()
                     image = Image.open(BytesIO(response.content))
-                    image = preprocess_image(image)
+                    image = self.preprocess_image(image)
                 else:
                     image = Image.open(raw_input).convert("RGB")
                 
@@ -312,6 +314,49 @@ class Offline_Learner:
             except Exception as e:
                 raise ValueError(f"Failed to load image from {raw_input}: {e}")
 
+    def message_template(self,input_type, raw_input):
+        """       Prepares messages with system prompt and user query based on input type."""
+
+        if input_type == "text":
+            messages = [
+
+            {
+                "role": "user", "content": [
+                    {
+                        "type": "text", "text": f"User Query:{raw_input}" ,                  }
+                
+            ]
+            },
+            {
+                "role": "assistant", "content": 
+             [
+                {
+                    "type": "text","text": self.system_prompt,
+                }
+             ]
+            }
+        ]
+            return messages
+        else: 
+            messages = [
+
+            {
+                "role": "user", "content": [
+                    {
+                        "type": "image", "text": f"User Query:{raw_input}" ,                  }
+                
+            ]
+            },
+            {
+                "role": "assistant", "content": 
+             [
+                {
+                    "type": "text","text": self.system_prompt,
+                }
+             ]
+            }
+            ]
+            return messages
         # if input_type == "image":
         #     try:
         #         if raw_input.startswith("http://") or raw_input.startswith("https://"):
@@ -330,25 +375,12 @@ class Offline_Learner:
     def chat_template(self,user_query: str,max_tokens=256):
         """ Prepare messages with system prompt and user query"""
 
+        input_type = self.detect_input_type(user_query)
+        # print(f"Detected input type: {input_type}")
+
+        # formatted_input = format_input(input_type, input_data)
 
 
-        messages = [
-
-            {
-                "role": "user", "content": [
-                    {
-                        "type": "text", "text": f"User Query:{user_query}" ,                  }
-                
-            ]
-            },
-            {
-                "role": "assistant", "content": 
-             [
-                {
-                    "type": "text","text": self.system_prompt,
-                }
-             ]
-            }
             # {
             #     "role" : "user",
             #     "content":
@@ -358,7 +390,7 @@ class Offline_Learner:
             #     ]
             # },
 
-        ]
+        messages = self.message_template(input_type, user_query)
         # Apply chat template
 
         input = self.processor.apply_chat_template(
@@ -386,3 +418,5 @@ offline_learn = Offline_Learner(model,tokenizer, system_prompt)
 prompt = "Create a 45-minute science lesson about photosynthesis for grade 7, limited resources, rural Tanzania"
 response = offline_learn.chat_template(prompt)
 print(response)
+
+
