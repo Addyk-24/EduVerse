@@ -250,7 +250,7 @@ class Offline_Learner:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = AutoProcessor.from_pretrained(model_name)
     
-    def preprocess_image(image: Image.Image) -> Image.Image:
+    def preprocess_image(self,image: Image.Image) -> Image.Image:
         """ Resize and converting image to RGB """ 
         if image.mode != 'RGB':
             image = image.convert('RGB')
@@ -286,7 +286,7 @@ class Offline_Learner:
     
     # Detection of input type
     def detect_input_type(self,input_data):
-        if isinstance(input_data, str) and input_data.endswith(('.png', '.jpg', '.jpeg')):
+        if isinstance(input_data, str) and input_data.endswith(('.png', '.jpg', '.jpeg','webp')):
             # if user_query is path to an image. load image
             return "image"
         elif isinstance(input_data,str) and input_data.endswith(('.mp4', '.avi', '.mov')):
@@ -466,6 +466,6 @@ Keep responses conversational but precise. Answer as if helping a student unders
 
 offline_learn = Offline_Learner(model,tokenizer, system_prompt)
 
-prompt = "/jee-physics-"
+prompt = "https://www.vedantu.com/content-images/iit-jee/jee-advanced-physics-question-paper-2-2018/1.webp"
 response = offline_learn.chat_template(prompt)
 print(response)
