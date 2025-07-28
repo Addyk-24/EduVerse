@@ -345,6 +345,8 @@ class Offline_Learner:
         if isinstance(input_data, str) and input_data.endswith(('.png', '.jpg', '.jpeg','webp')):
             # if user_query is path to an image. load image
             return "image"
+        elif isinstance(input_data, str) and input_data.startswith(("http://", "https://")):
+            return "image"
         elif isinstance(input_data,str) and input_data.endswith(('.mp4', '.avi', '.mov')):
             print("Video input is not supported yet. Please provide an image or text query.")
         else:
@@ -356,7 +358,8 @@ class Offline_Learner:
         Formats input data for image, audio (simulated), or text.
         Supports both local paths and URLs for images. Displays image if loaded.
         """
-        if input_type == "image":
+        # input_type = self.detect_input_type(raw_input)
+        if input_type == "image":   
             try:
                 if raw_input.startswith("http://") or raw_input.startswith("https://"):
                     response = requests.get(raw_input)
@@ -378,10 +381,9 @@ class Offline_Learner:
             raise ValueError(f"Unsupported input type: {input_type}")
     
 
-    def message_template(self,input_type, raw_input):
+    def message_template(self,input_type, formatted_input):
         """       Prepares messages with system prompt and user query based on input type."""
 
-        image = self.format_input_type(input_type, raw_input)
 
         if input_type == "text":
             messages = [
@@ -389,7 +391,7 @@ class Offline_Learner:
             {
                 "role": "user", "content": [
                     {
-                        "type": "text", "text": f"User Query:{raw_input}" ,
+                        "type": "text", "text": f"User Query:{formatted_input}" ,
                     }
                 
             ]
@@ -410,7 +412,7 @@ class Offline_Learner:
             {
                 "role": "user", "content": [
                     {
-                        "type": "image", "image": image 
+                        "type": "image", "image": formatted_input 
                     },
                 
             ]
@@ -435,16 +437,6 @@ class Offline_Learner:
 
         formatted_input = self.format_input_type(input_type, user_query)
 
-
-            # {
-            #     "role" : "user",
-            #     "content":
-            #     [
-            #         { "type": "image", "image" : {image}},
-            #         { "type": "text",  "text" : "Which films does this animal feature in?" }
-            #     ]
-            # },
-
         messages = self.message_template(input_type, formatted_input)
         # Apply chat template
 
@@ -468,8 +460,8 @@ class Offline_Learner:
         return response
 
 
-offline_learn = Offline_Learner(model,tokenizer, system_prompt)
+offline_learn = Offline_Learner(model,tokenizer, system_prompt,image_system_prompt)
 
-prompt = "https://www.vedantu.com/content-images/iit-jee/jee-advanced-physics-question-paper-2-2018/1.webp"
+prompt = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaJe2EQLw6UKqefBco4J_Z-1kxb3NI5ee1tA&s"
 response = offline_learn.chat_template(prompt)
 print(response)
