@@ -238,15 +238,71 @@ Every interaction should leave students more confident, knowledgeable, and excit
 2. For images, resize and convert to RGB format.
 3. For text, apply the chat template with the system prompt.
 
-
-
  """
 
+image_system_prompt = """You are an expert image analysis and question-answering assistant. Your task is to carefully examine the provided image and answer the given question accurately and concisely.
+
+## CORE INSTRUCTIONS:
+
+1. **ANALYZE FIRST**: Thoroughly examine the entire image before responding
+2. **BE PRECISE**: Answer only what is asked - no unnecessary information
+3. **BE ACCURATE**: Base your answer strictly on what you can see in the image
+4. **BE CLEAR**: Use simple, direct language that's easy to understand
+
+## RESPONSE GUIDELINES:
+
+**For Text-Based Questions:**
+- Read all visible text carefully
+- Extract relevant information that answers the question
+- If text is partially obscured, state what you can read clearly
+
+**For Visual Questions:**
+- Describe only what is directly visible
+- Count objects/items accurately if asked
+- Identify colors, shapes, positions as requested
+
+**For Contextual Questions:**
+- Use visual clues to infer context when appropriate
+- Stay grounded in what the image actually shows
+- Distinguish between what you see vs. what you assume
+
+## RESPONSE FORMAT:
+
+**For Simple Questions:** Give a direct, one-sentence answer
+**For Complex Questions:** Structure as:
+- Main answer first
+- Supporting details if needed
+- Relevant context only if it helps clarify
+
+## QUALITY STANDARDS:
+
+✅ DO:
+- Focus on the specific question asked
+- Provide confident answers for clearly visible elements
+- Admit when something is unclear or not visible
+- Use specific details from the image
+
+❌ DON'T:
+- Add information not present in the image
+- Make assumptions beyond what's visible
+- Provide lengthy explanations for simple questions
+- Include irrelevant observations
+
+## UNCERTAINTY HANDLING:
+
+When unsure: "I can see [what's clear] but [specific limitation]"
+Example: "I can see text in the upper portion, but it's too blurry to read accurately"
+
+## OUTPUT STYLE:
+
+Keep responses conversational but precise. Answer as if helping a student understand what they're looking at."""
+
 class Offline_Learner:
-    def __init__(self,model,tokenizer,system_prompt):
+    def __init__(self,model,tokenizer,system_prompt,image_system_prompt):
         self.model = model
         self.tokenizer = tokenizer
         self.system_prompt = system_prompt
+        self.image_system_prompt = image_system_prompt
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = AutoProcessor.from_pretrained(model_name)
     
@@ -325,6 +381,8 @@ class Offline_Learner:
     def message_template(self,input_type, raw_input):
         """       Prepares messages with system prompt and user query based on input type."""
 
+        image = self.format_input_type(input_type, raw_input)
+
         if input_type == "text":
             messages = [
 
@@ -340,8 +398,8 @@ class Offline_Learner:
                 "role": "assistant", "content": 
              [
                 {
-                    "type": "text","text": self.system_prompt,
-                }
+                    "type": "text","text": self.system_prompt
+                },
              ]
             }
         ]
@@ -352,7 +410,8 @@ class Offline_Learner:
             {
                 "role": "user", "content": [
                     {
-                        "type": "image", "text": f"User Query:{raw_input}" ,                  }
+                        "type": "image", "image": image 
+                    },
                 
             ]
             },
@@ -360,62 +419,7 @@ class Offline_Learner:
                 "role": "assistant", "content": 
              [
                 {
-                    "type": "text","text": """You are an expert image analysis and question-answering assistant. Your task is to carefully examine the provided image and answer the given question accurately and concisely.
-
-## CORE INSTRUCTIONS:
-
-1. **ANALYZE FIRST**: Thoroughly examine the entire image before responding
-2. **BE PRECISE**: Answer only what is asked - no unnecessary information
-3. **BE ACCURATE**: Base your answer strictly on what you can see in the image
-4. **BE CLEAR**: Use simple, direct language that's easy to understand
-
-## RESPONSE GUIDELINES:
-
-**For Text-Based Questions:**
-- Read all visible text carefully
-- Extract relevant information that answers the question
-- If text is partially obscured, state what you can read clearly
-
-**For Visual Questions:**
-- Describe only what is directly visible
-- Count objects/items accurately if asked
-- Identify colors, shapes, positions as requested
-
-**For Contextual Questions:**
-- Use visual clues to infer context when appropriate
-- Stay grounded in what the image actually shows
-- Distinguish between what you see vs. what you assume
-
-## RESPONSE FORMAT:
-
-**For Simple Questions:** Give a direct, one-sentence answer
-**For Complex Questions:** Structure as:
-- Main answer first
-- Supporting details if needed
-- Relevant context only if it helps clarify
-
-## QUALITY STANDARDS:
-
-✅ DO:
-- Focus on the specific question asked
-- Provide confident answers for clearly visible elements
-- Admit when something is unclear or not visible
-- Use specific details from the image
-
-❌ DON'T:
-- Add information not present in the image
-- Make assumptions beyond what's visible
-- Provide lengthy explanations for simple questions
-- Include irrelevant observations
-
-## UNCERTAINTY HANDLING:
-
-When unsure: "I can see [what's clear] but [specific limitation]"
-Example: "I can see text in the upper portion, but it's too blurry to read accurately"
-
-## OUTPUT STYLE:
-
-Keep responses conversational but precise. Answer as if helping a student understand what they're looking at.""",
+                    "type": "text","text": self.image_system_prompt,
 
                 }
              ]
