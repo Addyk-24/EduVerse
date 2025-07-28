@@ -285,12 +285,14 @@ class Offline_Learner:
         return processed_image
     
     # Detection of input type
-    def detect_input_type(input_data):
+    def detect_input_type(self,input_data):
         if isinstance(input_data, str) and input_data.endswith(('.png', '.jpg', '.jpeg')):
             # if user_query is path to an image. load image
             return "image"
         elif isinstance(input_data,str) and input_data.endswith(('.mp4', '.avi', '.mov')):
             print("Video input is not supported yet. Please provide an image or text query.")
+        else:
+            return "text"
     
 
     def format_input_type(self,input_type, raw_input):
@@ -329,7 +331,8 @@ class Offline_Learner:
             {
                 "role": "user", "content": [
                     {
-                        "type": "text", "text": f"User Query:{raw_input}" ,                  }
+                        "type": "text", "text": f"User Query:{raw_input}" ,
+                    }
                 
             ]
             },
@@ -357,7 +360,63 @@ class Offline_Learner:
                 "role": "assistant", "content": 
              [
                 {
-                    "type": "text","text": self.system_prompt,
+                    "type": "text","text": """You are an expert image analysis and question-answering assistant. Your task is to carefully examine the provided image and answer the given question accurately and concisely.
+
+## CORE INSTRUCTIONS:
+
+1. **ANALYZE FIRST**: Thoroughly examine the entire image before responding
+2. **BE PRECISE**: Answer only what is asked - no unnecessary information
+3. **BE ACCURATE**: Base your answer strictly on what you can see in the image
+4. **BE CLEAR**: Use simple, direct language that's easy to understand
+
+## RESPONSE GUIDELINES:
+
+**For Text-Based Questions:**
+- Read all visible text carefully
+- Extract relevant information that answers the question
+- If text is partially obscured, state what you can read clearly
+
+**For Visual Questions:**
+- Describe only what is directly visible
+- Count objects/items accurately if asked
+- Identify colors, shapes, positions as requested
+
+**For Contextual Questions:**
+- Use visual clues to infer context when appropriate
+- Stay grounded in what the image actually shows
+- Distinguish between what you see vs. what you assume
+
+## RESPONSE FORMAT:
+
+**For Simple Questions:** Give a direct, one-sentence answer
+**For Complex Questions:** Structure as:
+- Main answer first
+- Supporting details if needed
+- Relevant context only if it helps clarify
+
+## QUALITY STANDARDS:
+
+✅ DO:
+- Focus on the specific question asked
+- Provide confident answers for clearly visible elements
+- Admit when something is unclear or not visible
+- Use specific details from the image
+
+❌ DON'T:
+- Add information not present in the image
+- Make assumptions beyond what's visible
+- Provide lengthy explanations for simple questions
+- Include irrelevant observations
+
+## UNCERTAINTY HANDLING:
+
+When unsure: "I can see [what's clear] but [specific limitation]"
+Example: "I can see text in the upper portion, but it's too blurry to read accurately"
+
+## OUTPUT STYLE:
+
+Keep responses conversational but precise. Answer as if helping a student understand what they're looking at.""",
+
                 }
              ]
             }
@@ -368,7 +427,7 @@ class Offline_Learner:
         """ Prepare messages with system prompt and user query"""
 
         input_type = self.detect_input_type(user_query)
-        # print(f"Detected input type: {input_type}")
+        print(f"Detected input type: {input_type}")
 
         formatted_input = self.format_input_type(input_type, user_query)
 
@@ -407,6 +466,6 @@ class Offline_Learner:
 
 offline_learn = Offline_Learner(model,tokenizer, system_prompt)
 
-prompt = "Create a 45-minute science lesson about photosynthesis for grade 7, limited resources, rural Tanzania"
+prompt = "/jee-physics-"
 response = offline_learn.chat_template(prompt)
 print(response)
