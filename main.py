@@ -306,13 +306,19 @@ class Offline_Learner:
                     image = Image.open(BytesIO(response.content))
                     image = self.preprocess_image(image)
                 else:
-                    image = Image.open(raw_input).convert("RGB")
+                    image = Image.open(raw_input)
+                    image = self.preprocess_image(image)
                 
                 print("Image Loaded")
-
-
+                # Return the processed image
+                return image
             except Exception as e:
                 raise ValueError(f"Failed to load image from {raw_input}: {e}")
+        elif input_type == "text":
+            return raw_input
+        else:
+            raise ValueError(f"Unsupported input type: {input_type}")
+    
 
     def message_template(self,input_type, raw_input):
         """       Prepares messages with system prompt and user query based on input type."""
@@ -357,28 +363,14 @@ class Offline_Learner:
             }
             ]
             return messages
-        # if input_type == "image":
-        #     try:
-        #         if raw_input.startswith("http://") or raw_input.startswith("https://"):
-        #             response = requests.get(raw_input)
-        #             response.raise_for_status()
-        #             image = Image.open(BytesIO(response.content)).convert("RGB")
-        #         else:
-        #             image = Image.open(raw_input).convert("RGB")
 
-        #         print("Image loaded successfully. Preview below:")
-        #         display_resized_image(image, width_px=300)
-
-        #         return image
-        #     except Exception as e:
-        #         raise ValueError(f"Failed to load image from {raw_input}: {e}")
     def chat_template(self,user_query: str,max_tokens=256):
         """ Prepare messages with system prompt and user query"""
 
         input_type = self.detect_input_type(user_query)
         # print(f"Detected input type: {input_type}")
 
-        # formatted_input = format_input(input_type, input_data)
+        formatted_input = self.format_input_type(input_type, user_query)
 
 
             # {
@@ -390,7 +382,7 @@ class Offline_Learner:
             #     ]
             # },
 
-        messages = self.message_template(input_type, user_query)
+        messages = self.message_template(input_type, formatted_input)
         # Apply chat template
 
         input = self.processor.apply_chat_template(
@@ -418,5 +410,3 @@ offline_learn = Offline_Learner(model,tokenizer, system_prompt)
 prompt = "Create a 45-minute science lesson about photosynthesis for grade 7, limited resources, rural Tanzania"
 response = offline_learn.chat_template(prompt)
 print(response)
-
-
