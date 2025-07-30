@@ -298,7 +298,17 @@ Example: "I can see text in the upper portion, but it's too blurry to read accur
 Keep responses conversational but precise. Answer as if helping a student understand what they're looking at."""
 
 
-
+# Utility function to load image from URL
+def load_image_from_url(url: str) -> Image.Image:
+    """Load image from URL"""
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        image = Image.open(BytesIO(response.content))
+        return image
+    except Exception as e:
+        logger.error(f"Error loading image from URL: {str(e)}")
+        raise
 
 
 class EduVerse:
@@ -477,3 +487,15 @@ print("✅ Model loaded successfully!")
 prompt = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaJe2EQLw6UKqefBco4J_Z-1kxb3NI5ee1tA&s"
 response = eduverse.chat_template(prompt)
 print(response)
+
+
+# Example usage
+# url = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaJe2EQLw6UKqefBco4J_Z-1kxb3NI5ee1tA&s"
+url = "/kaggle/input/jee-mains-question/jee_mains.jpeg"
+try:
+    # Load image from URL
+    image = load_image_from_url(url)
+    display(image)
+
+except Exception as e:
+        print(f"❌ Error: {str(e)}")
