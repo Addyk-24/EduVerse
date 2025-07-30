@@ -1,4 +1,4 @@
-# 🎓 EduVerse:"Your Personal Learning Universe, Anywhere"
+# 🎓 EduVerse: "Your Personal Learning Universe, Anywhere"
 
 > *Democratizing quality education through offline-first, culturally adaptive AI tutoring*
 
