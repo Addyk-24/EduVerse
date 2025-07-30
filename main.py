@@ -297,7 +297,11 @@ Example: "I can see text in the upper portion, but it's too blurry to read accur
 
 Keep responses conversational but precise. Answer as if helping a student understand what they're looking at."""
 
-class Offline_Learner:
+
+
+
+
+class EduVerse:
     def __init__(self,model,tokenizer,system_prompt,image_system_prompt):
         self.model = model
         self.tokenizer = tokenizer
@@ -460,8 +464,16 @@ class Offline_Learner:
         return response
 
 
-offline_learn = Offline_Learner(model,tokenizer, system_prompt,image_system_prompt)
+d_type = torch.bfloat16
+
+# Initialize and load the model
+print("Initializing Model...")
+print("Loading model... This may take a few minutes on first run.")
+eduverse = EduVerse(model,tokenizer, system_prompt,image_system_prompt,d_type)
+
+print("✅ Model loaded successfully!")
+
 
 prompt = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaJe2EQLw6UKqefBco4J_Z-1kxb3NI5ee1tA&s"
-response = offline_learn.chat_template(prompt)
+response = eduverse.chat_template(prompt)
 print(response)
