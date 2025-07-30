@@ -312,13 +312,14 @@ def load_image_from_url(url: str) -> Image.Image:
 
 
 class EduVerse:
-    def __init__(self,model,tokenizer,system_prompt,image_system_prompt):
+    def __init__(self,model,tokenizer,system_prompt,image_system_prompt,d_type):
         self.model = model
         self.tokenizer = tokenizer
         self.system_prompt = system_prompt
         self.image_system_prompt = image_system_prompt
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = AutoProcessor.from_pretrained(model_name)
+        self.d_type = d_type
     
     def preprocess_image(self,image: Image.Image) -> Image.Image:
         """ Resize and converting image to RGB """ 
@@ -485,14 +486,14 @@ print("✅ Model loaded successfully!")
 
 
 # Text usage example
-prompt = "List me all countries in the world and their capitals."
-response = eduverse.chat_template(prompt)
-print(response)
+# prompt = "List me all countries in the world and their capitals."
+# response = eduverse.chat_template(prompt)
+# print(response)
 
 
 # Image usage Example
 # url = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaJe2EQLw6UKqefBco4J_Z-1kxb3NI5ee1tA&s"
-url = "/kaggle/input/jee-mains-question/jee_mains.jpeg"
+url = "https://prepmaven.com/blog/wp-content/uploads/2023/10/Screenshot-2023-10-12-101500.png"
 # try:
 #     # Load image from URL
 #     image = load_image_from_url(url)
