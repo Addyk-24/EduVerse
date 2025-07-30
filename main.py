@@ -484,18 +484,22 @@ eduverse = EduVerse(model,tokenizer, system_prompt,image_system_prompt,d_type)
 print("✅ Model loaded successfully!")
 
 
-prompt = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaJe2EQLw6UKqefBco4J_Z-1kxb3NI5ee1tA&s"
+# Text usage example
+prompt = "List me all countries in the world and their capitals."
 response = eduverse.chat_template(prompt)
 print(response)
 
 
-# Example usage
+# Image usage Example
 # url = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaJe2EQLw6UKqefBco4J_Z-1kxb3NI5ee1tA&s"
 url = "/kaggle/input/jee-mains-question/jee_mains.jpeg"
-try:
-    # Load image from URL
-    image = load_image_from_url(url)
-    display(image)
+# try:
+#     # Load image from URL
+#     image = load_image_from_url(url)
+#     display(image)
 
-except Exception as e:
-        print(f"❌ Error: {str(e)}")
+# except Exception as e:
+#         print(f"❌ Error: {str(e)}")
+
+response = eduverse.chat_template(url)
+print(response)
