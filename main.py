@@ -12,7 +12,7 @@ from typing import Union, Tuple
 from dataclasses import dataclass
 import os
 
-
+import streamlit as st
 
 model_name = "google/gemma-3n-E4B-it"
 
@@ -526,3 +526,435 @@ url = "https://prepmaven.com/blog/wp-content/uploads/2023/10/Screenshot-2023-10-
 
 response = eduverse.chat_template(url)
 print(response)
+
+
+def main():
+    pass
+import streamlit as st
+import torch
+from PIL import Image
+import requests
+from io import BytesIO
+import base64
+import time
+
+# Configure page
+st.set_page_config(
+    page_title="EduVerse - AI Educational Assistant",
+    page_icon="🎓",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS for better styling
+st.markdown("""
+<style>
+    .main-header {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .main-header h1 {
+        color: white;
+        margin: 0;
+        font-size: 2.5rem;
+    }
+    
+    .main-header p {
+        color: rgba(255,255,255,0.9);
+        margin: 0.5rem 0 0 0;
+        font-size: 1.1rem;
+    }
+    
+    .chat-container {
+        background: #f8f9ff;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid #e1e5e9;
+    }
+    
+    .user-message {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 20px 20px 5px 20px;
+        margin: 1rem 0;
+        max-width: 80%;
+        margin-left: auto;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+    }
+    
+    .ai-message {
+        background: white;
+        color: #333;
+        padding: 1rem 1.5rem;
+        border-radius: 20px 20px 20px 5px;
+        margin: 1rem 0;
+        max-width: 80%;
+        border: 1px solid #e1e5e9;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .input-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        border: 2px solid #f0f2f6;
+        margin: 2rem 0;
+    }
+    
+    .model-status {
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .status-loading {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .status-ready {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .image-preview {
+        border: 2px dashed #667eea;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        margin: 1rem 0;
+        background: #f8f9ff;
+    }
+    
+    .feature-card {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin: 1rem 0;
+        border: 1px solid #e1e5e9;
+    }
+    
+    .stButton > button {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Initialize session state
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+
+if 'model_loaded' not in st.session_state:
+    st.session_state.model_loaded = False
+
+if 'eduverse_model' not in st.session_state:
+    st.session_state.eduverse_model = None
+
+# Header
+st.markdown("""
+<div class="main-header">
+    <h1>🎓 EduVerse AI Assistant</h1>
+    <p>Your AI-powered educational companion - Ask questions with text or images!</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Sidebar for model status and settings
+with st.sidebar:
+    st.title("🔧 Model Control")
+    
+    # Model status
+    if st.session_state.model_loaded:
+        st.markdown('<div class="model-status status-ready">✅ Model Ready</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="model-status status-loading">⏳ Model Not Loaded</div>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Model loading section
+    st.subheader("🚀 Initialize Model")
+    
+    if st.button("🔄 Load EduVerse Model", type="primary"):
+        with st.spinner("Loading model... This may take a few minutes..."):
+            try:
+                # Here you would initialize your actual model
+                # For demo purposes, we'll simulate the loading
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                status_text.text("Initializing model...")
+                progress_bar.progress(25)
+                time.sleep(1)
+                
+                status_text.text("Loading tokenizer...")
+                progress_bar.progress(50)
+                time.sleep(1)
+                
+                status_text.text("Setting up EduVerse...")
+                progress_bar.progress(75)
+                time.sleep(1)
+                
+                status_text.text("Finalizing setup...")
+                progress_bar.progress(100)
+                time.sleep(0.5)
+                
+                # In your actual implementation, replace this with:
+                # d_type = torch.bfloat16
+                # st.session_state.eduverse_model = EduVerse(model, tokenizer, system_prompt, image_system_prompt, d_type)
+                
+                st.session_state.model_loaded = True
+                st.session_state.eduverse_model = "Model Loaded"  # Placeholder
+                
+                progress_bar.empty()
+                status_text.empty()
+                st.success("✅ Model loaded successfully!")
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"❌ Error loading model: {str(e)}")
+    
+    if st.session_state.model_loaded:
+        if st.button("🗑️ Unload Model"):
+            st.session_state.model_loaded = False
+            st.session_state.eduverse_model = None
+            st.success("Model unloaded successfully!")
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # Settings
+    st.subheader("⚙️ Settings")
+    temperature = st.slider("Temperature", 0.1, 2.0, 0.7, 0.1)
+    max_tokens = st.slider("Max Tokens", 100, 2000, 500, 50)
+    
+    st.markdown("---")
+    
+    # Clear chat
+    if st.button("🧹 Clear Chat History"):
+        st.session_state.chat_history = []
+        st.rerun()
+
+# Main content area
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    # Chat history
+    st.subheader("💬 Conversation")
+    
+    if st.session_state.chat_history:
+        chat_container = st.container()
+        with chat_container:
+            for i, message in enumerate(st.session_state.chat_history):
+                if message["role"] == "user":
+                    st.markdown(f'<div class="user-message">👤 <strong>You:</strong><br>{message["content"]}</div>', 
+                               unsafe_allow_html=True)
+                    
+                    # Display image if present
+                    if "image" in message and message["image"]:
+                        st.image(message["image"], width=300, caption="Uploaded Image")
+                        
+                else:
+                    st.markdown(f'<div class="ai-message">🎓 <strong>EduVerse:</strong><br>{message["content"]}</div>', 
+                               unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="chat-container">
+            <h3>👋 Welcome to EduVerse!</h3>
+            <p>I'm your AI educational assistant. You can:</p>
+            <ul>
+                <li>📝 Ask questions about any subject</li>
+                <li>🖼️ Upload images for analysis and explanation</li>
+                <li>🔗 Share image URLs for me to examine</li>
+                <li>📚 Get help with homework, concepts, and learning</li>
+            </ul>
+            <p><strong>Start by loading the model in the sidebar, then ask me anything!</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
+
+with col2:
+    # Input section
+    st.markdown('<div class="input-section">', unsafe_allow_html=True)
+    st.subheader("📝 Ask EduVerse")
+    
+    # Text input
+    user_input = st.text_area(
+        "Enter your question:",
+        placeholder="e.g., Explain photosynthesis, solve this math problem, what's in this image?",
+        height=100
+    )
+    
+    # Image input options
+    st.subheader("🖼️ Image Input")
+    
+    image_option = st.radio(
+        "Choose image input method:",
+        ["Upload Image", "Image URL", "No Image"]
+    )
+    
+    uploaded_image = None
+    image_url = None
+    
+    if image_option == "Upload Image":
+        uploaded_file = st.file_uploader(
+            "Choose an image file",
+            type=['png', 'jpg', 'jpeg', 'gif', 'bmp'],
+            help="Upload an image for analysis"
+        )
+        
+        if uploaded_file:
+            uploaded_image = Image.open(uploaded_file)
+            st.image(uploaded_image, caption="Uploaded Image", width=250)
+    
+    elif image_option == "Image URL":
+        image_url = st.text_input(
+            "Enter image URL:",
+            placeholder="https://example.com/image.jpg"
+        )
+        
+        if image_url:
+            try:
+                response = requests.get(image_url)
+                uploaded_image = Image.open(BytesIO(response.content))
+                st.image(uploaded_image, caption="Image from URL", width=250)
+            except Exception as e:
+                st.error(f"Failed to load image from URL: {str(e)}")
+    
+    # Submit button
+    if st.button("🚀 Send Message", type="primary", use_container_width=True):
+        if not st.session_state.model_loaded:
+            st.error("⚠️ Please load the model first using the sidebar!")
+        elif not user_input and not uploaded_image:
+            st.warning("⚠️ Please enter a question or upload an image!")
+        else:
+            # Add user message to chat history
+            user_message = {
+                "role": "user",
+                "content": user_input if user_input else "Please analyze this image",
+                "image": uploaded_image
+            }
+            st.session_state.chat_history.append(user_message)
+            
+            # Generate AI response
+            with st.spinner("🤔 EduVerse is thinking..."):
+                try:
+                    # In your actual implementation, replace this with:
+                    # if uploaded_image or image_url:
+                    #     response = st.session_state.eduverse_model.chat_template(image_url if image_url else uploaded_image)
+                    # else:
+                    #     response = st.session_state.eduverse_model.chat_template(user_input)
+                    
+                    # Simulated response for demo
+                    if uploaded_image:
+                        response = f"I can see the image you've uploaded. Based on what I observe, this appears to be an educational image that I can help analyze. You asked: '{user_input if user_input else 'Please analyze this image'}'\n\nThis is a simulated response. In the actual implementation, your EduVerse model would analyze the image and provide detailed educational insights."
+                    else:
+                        response = f"Thank you for your question: '{user_input}'\n\nThis is a simulated response. In the actual implementation, your EduVerse model would provide a comprehensive educational response based on your question."
+                    
+                    # Add AI response to chat history
+                    ai_message = {
+                        "role": "assistant",
+                        "content": response
+                    }
+                    st.session_state.chat_history.append(ai_message)
+                    
+                except Exception as e:
+                    st.error(f"❌ Error generating response: {str(e)}")
+            
+            st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Footer with example prompts
+st.markdown("---")
+st.subheader("💡 Example Prompts")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("""
+    <div class="feature-card">
+        <h4>📚 Text Questions</h4>
+        <ul>
+            <li>"Explain quantum physics simply"</li>
+            <li>"Solve: 2x + 5 = 13"</li>
+            <li>"What is photosynthesis?"</li>
+            <li>"Help me write an essay"</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown("""
+    <div class="feature-card">
+        <h4>🖼️ Image Analysis</h4>
+        <ul>
+            <li>Math problems from textbooks</li>
+            <li>Scientific diagrams</li>
+            <li>Historical documents</li>
+            <li>Charts and graphs</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown("""
+    <div class="feature-card">
+        <h4>🎯 Learning Support</h4>
+        <ul>
+            <li>"Break down this concept"</li>
+            <li>"Create practice problems"</li>
+            <li>"Explain step by step"</li>
+            <li>"What's the real-world use?"</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Instructions for actual implementation
+st.markdown("---")
+st.info("""
+**🔧 Implementation Notes:**
+
+To integrate with your actual EduVerse model, replace the simulated model loading and response generation sections with:
+
+```python
+# In the model loading section:
+d_type = torch.bfloat16
+st.session_state.eduverse_model = EduVerse(model, tokenizer, system_prompt, image_system_prompt, d_type)
+
+# In the response generation section:
+if uploaded_image or image_url:
+    response = st.session_state.eduverse_model.chat_template(image_url if image_url else uploaded_image)
+else:
+    response = st.session_state.eduverse_model.chat_template(user_input)
+```
+""")
+
+
+if __name__ == "__main__":
+    main()
+    
