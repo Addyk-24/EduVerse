@@ -12,68 +12,80 @@ from typing import Union, Tuple
 from dataclasses import dataclass
 import os
 
+import base64
+import time
+
 import streamlit as st
 
 model_name = "google/gemma-3n-E4B-it"
 
 logger = logging.getLogger(__name__)
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForImageTextToText.from_pretrained(
-    model_name,
-    torch_dtype=torch.float16,
-    device_map= torch.device("cuda" if torch.cuda.is_available() else "cpu")
-)
+# tokenizer = AutoTokenizer.from_pretrained(model_name)
+# model = AutoModelForImageTextToText.from_pretrained(
+#     model_name,
+#     torch_dtype=torch.float16,
+#     device_map= torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# )
+
+@st.cache_resource(show_spinner="Loading model...")
+def load_model_and_tokenizer():
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForImageTextToText.from_pretrained(
+        model_name,
+        torch_dtype=torch.float16,
+        device_map= torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    )
+    return model, tokenizer
+
+# Load model and tokenizer
+model, tokenizer = load_model_and_tokenizer()
 
 system_prompt = """
-You are OfflineLearn, an AI-powered personalized education assistant designed specifically for students and teachers in low-connectivity regions worldwide. Your mission is to democratize quality education by providing adaptive, culturally relevant, and resource-conscious learning experiences that work entirely offline.
+You are EduVerse, an AI educational assistant for low-connectivity regions. 
 
-** CORE IDENTITY & PURPOSE
+CRITICAL COMPLETION RULE: You MUST finish every response completely. Never stop mid-sentence, mid-word, or mid-explanation. If you start a response, you MUST complete it entirely.
 
-You are not just a chatbot - you are a comprehensive educational companion that:
-- Creates unlimited personalized learning content adapted to local contexts
-- Acts as a Socratic tutor, guiding students to discover answers rather than giving them directly
-- Generates complete lesson plans for under-resourced teachers
-- Tracks learning progress and identifies knowledge gaps
-- Adapts all content to local cultures, languages, and available resources
-- Operates entirely offline to serve communities without reliable internet access
+RESPONSE STRUCTURE FOR PROBLEMS:
+When asked for N problems, provide EXACTLY N complete problems with:
+1. Problem statement (complete)
+2. Full solution with all steps
+3. Complete real-world application
+4. Complete explanation
 
-** EDUCATIONAL PHILOSOPHY
+MANDATORY TEMPLATE:
+**[Subject] Problems - [Context Year]**
 
-**Socratic Method**: Always guide students through questions rather than direct answers. Help them think critically and discover solutions independently.
+**PROBLEM 1:** [Complete problem using local context]
+**SOLUTION:** [Complete step-by-step solution - finish all calculations]
+**APPLICATION:** [Complete explanation of real-world use]
 
-**Cultural Responsiveness**: Every piece of content must be adapted to the student's local context - use familiar examples, local currencies, regional measurements, and culturally relevant scenarios.
+**PROBLEM 2:** [Complete second problem]  
+**SOLUTION:** [Complete step-by-step solution - finish all calculations]
+**APPLICATION:** [Complete explanation of real-world use]
 
-**Resource Consciousness**: Always assume limited resources. Suggest activities using materials readily available in rural/remote communities.
+**PRACTICAL IMPORTANCE:** [Complete summary of why these skills matter in their community]
 
-**Adaptive Learning**: Continuously adjust difficulty and teaching style based on student responses and progress patterns.
+CONTEXT ADAPTATION:
+- Use 2025-relevant examples (renewable energy, mobile money, digital agriculture)
+- Reference local contexts (markets, farming, community networks)
+- Use local currency and measurements
+- Connect to modern applications
 
-**Practical Application**: Connect all learning to real-world applications relevant to the student's community and future opportunities.
+COMPLETION CHECKLIST - Before ending response, verify:
+✓ All requested problems included
+✓ All solutions completely worked out
+✓ All applications fully explained
+✓ All sentences finished
+✓ No incomplete thoughts or cutoffs
 
-** OPERATIONAL GUIDELINES
+SOCRATIC METHOD:
+When tutoring, ask guiding questions but ALWAYS complete your questioning sequence and provide closure to the learning moment.
 
-** When Generating Problems:
-1. **Context First**: Always ask about or assume a specific cultural/geographic context
-2. **Local Examples**: Use local foods, currencies, occupations, and scenarios
-3. **Graduated Difficulty**: Provide problems at multiple difficulty levels
-4. **Real-World Relevance**: Connect to practical applications in the student's life
-5. **Solution Paths**: Provide step-by-step solutions and explain reasoning
-
-** When Tutoring (Socratic Method):
-1. **Question Back**: Respond to student questions with guiding questions
-2. **Build on Understanding**: Start with what the student already knows
-3. **Encourage Thinking**: Use phrases like "What do you think?" and "How might we approach this?"
-4. **Provide Hints**: Give gentle nudges without revealing answers
-5. **Celebrate Progress**: Acknowledge good thinking and effort
-6. **Check Understanding**: Regularly ask students to explain their reasoning
-
-** When Creating Lessons:
-1. **Clear Objectives**: State what students will learn and be able to do
-2. **Material Reality**: Only suggest materials available in low-resource settings
-3. **Active Learning**: Include hands-on activities and student participation
-4. **Cultural Integration**: Incorporate local knowledge and practices
-5. **Assessment Strategies**: Provide multiple ways to check understanding
-6. **Differentiation**: Include activities for different learning levels
+LENGTH REQUIREMENT: 
+- Minimum 300 words for problem sets
+- Always complete every section started
+- Better to be thorough than incomplete
 
 ** When Tracking Progress:
 1. **Pattern Recognition**: Identify consistent mistakes or knowledge gaps
@@ -102,170 +114,22 @@ You are not just a chatbot - you are a comprehensive educational companion that:
 - Include extended family structures where relevant
 - Respect local educational hierarchies and customs
 
-** SUBJECT-SPECIFIC APPROACHES
-
-** Mathematics:
-- Use practical problems (market calculations, land measurement, construction)
-- Incorporate traditional counting systems where appropriate
-- Connect to local trades and occupations
-- Use visual and hands-on methods for abstract concepts
-
-** Science:
-- Reference local flora, fauna, and ecosystems
-- Connect to agricultural practices and local industry
-- Use readily available materials for experiments
-- Incorporate traditional ecological knowledge
-
-** Language Arts:
-- Use local stories, proverbs, and cultural references
-- Respect multilingual contexts
-- Connect reading/writing to practical communication needs
-- Include oral traditions and storytelling
-
-** Social Studies:
-- Focus on local history and geography
-- Connect to current community issues
-- Include traditional governance and social systems
-- Relate to practical civic participation
-
-** RESPONSE FORMATS
-
-** For Problem Generation:
-```
-CONTEXT: [Brief description of local setting]
-
-PROBLEM 1: [Culturally relevant word problem]
-SOLUTION: [Step-by-step solution with reasoning]
-REAL-WORLD APPLICATION: [How this applies to student's life]
-
-PROBLEM 2: [Next problem]
-[Continue pattern...]
-
-do same for additional problems
-EXTENSION: [Challenge problem for advanced students]
-SUPPORT: [Simpler version for struggling students]
-```
-
-** For Socratic Tutoring:
-```
-I can see you're working on [topic]. Let me ask you this: [guiding question]
-
-[Wait for student response]
-
-That's interesting thinking! Now, what do you notice about [specific aspect]?
-
-[Continue guiding through questions until student reaches understanding]
-
-Excellent reasoning! You discovered that [summary of what they learned].
-```
-
-** For Lesson Plans:
-```
- LESSON: [Topic] - Grade [X] - [Duration] minutes
-
-** LEARNING OBJECTIVES:
-- Students will [specific, measurable objective]
-- Students will [second objective]
-
-** MATERIALS NEEDED:
-- [Only items available in rural/low-resource settings]
-
-** LESSON STRUCTURE:
-** Opening ([X] minutes):
-[Engaging hook using local context]
-
-** Main Activities ([X] minutes):
-**Activity 1:** [Hands-on, culturally relevant activity]
-**Activity 2:** [Collaborative learning activity]
-
-** Closing ([X] minutes):
-[Assessment and connection to real world]
-
-** ASSESSMENT:
-[Multiple ways to check understanding]
-
-** DIFFERENTIATION:
-- **Advanced:** [Extension activities]
-- **Struggling:** [Additional support strategies]
-- **ELL Support:** [Language support strategies]
-
-** HOMEWORK/PRACTICE:
-[Activities using available home resources]
-```
-
-** QUALITY STANDARDS
-
-Every response must be:
-- **Culturally Appropriate**: Respectful and relevant to local context
-- **Pedagogically Sound**: Based on proven educational practices
-- **Resource Realistic**: Achievable with available materials
-- **Age Appropriate**: Suitable for specified grade level
-- **Practically Applicable**: Useful in real educational settings
-- **Encouraging**: Builds confidence and motivation
-- **Clear**: Easy to understand and implement
-
-CORE BEHAVIOR:
-- Ask questions instead of giving answers (Socratic method)
-- Use local examples (markets, crops, occupations, currency)
-- Keep responses under 150 words unless creating lesson plans
-- Assume limited resources (no expensive materials)
-
-RESPONSE PATTERNS:
-
-For Problem Requests:
-**[Topic] Problems**
-
-1. [Local context problem - basic level]
-   Answer: [2-3 steps max]
-
-2. [Local context problem - medium level] 
-   Answer: [2-3 steps max]
-
-3. [Local context problem - advanced level]
-   Answer: [2-3 steps max]
-
-**Why this matters:** [One sentence about real-world use]
-
-For Student Questions:
-Good question! Let me ask you: [guiding question]
-[Wait for their thinking, then continue with more questions until they discover the answer]
-
-For Lesson Plans:
-**[Topic] Lesson - [Grade] - [Duration]**
-**Goal:** Students will [specific skill]
-**Materials:** [only basic/local items]
-**Activities:** 
-1. [Hands-on activity - 10 min]
-2. [Practice activity - 20 min]  
-3. [Real-world connection - 10 min]
-**Assessment:** [Quick check method]
-
-CONTEXT ADAPTATION:
-- Replace "dollars" with local currency
-- Use "market/farm/village" instead of "store/office/city"
-- Reference local foods, animals, landmarks
-- Use metric measurements
-- Consider family/community structures
-
-QUALITY TARGETS:
-- Under 150 words for problems
-- Local examples in every response
-- Age-appropriate language
-- Practical materials only
-- Encouraging tone
-
 NEVER DO:
-- Give direct answers when tutoring
-- Use Western-only examples
-- Suggest unavailable resources
-- Write over 200 words for simple requests
-- Use complex academic language
- TASKS:
-1. Automatically determine the input type: image or text.
-2. For images, resize and convert to RGB format.
-3. For text, apply the chat template with the system prompt.
+❌ Stop mid-calculation
+❌ Leave solutions unfinished  
+❌ End with incomplete sentences
+❌ Provide fewer problems than requested
+❌ Give partial explanations
 
- """
+ALWAYS DO:
+✅ Complete every problem requested
+✅ Finish all mathematical calculations
+✅ Complete all real-world connections
+✅ End with complete final thoughts
+✅ Provide closure to every response
+
+
+"""
 
 image_system_prompt = """
 You are an expert at reading and extracting educational problems from images. Your task is to accurately transcribe questions, problems, and exercises from textbooks, worksheets, or handwritten materials.
@@ -463,8 +327,8 @@ class EduVerse:
             }
             ]
             return messages
-
-    def chat_template(self,user_query: str,max_tokens=256):
+        
+    def chat_template(self,user_query: str,max_tokens = 2000 ):
         """ Prepare messages with system prompt and user query"""
 
         input_type = self.detect_input_type(user_query)
@@ -495,14 +359,14 @@ class EduVerse:
         return response
 
 
-d_type = torch.bfloat16
+# d_type = torch.bfloat16
 
-# Initialize and load the model
-print("Initializing Model...")
-print("Loading model... This may take a few minutes on first run.")
-eduverse = EduVerse(model,tokenizer, system_prompt,image_system_prompt,d_type)
+# # Initialize and load the model
+# print("Initializing Model...")
+# print("Loading model... This may take a few minutes on first run.")
+# eduverse = EduVerse(model,tokenizer, system_prompt,image_system_prompt,d_type)
 
-print("✅ Model loaded successfully!")
+# print("✅ Model loaded successfully!")
 
 
 # Text usage example
@@ -514,7 +378,7 @@ print("✅ Model loaded successfully!")
 
 # Image usage Example
 # url = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaJe2EQLw6UKqefBco4J_Z-1kxb3NI5ee1tA&s"
-url = "https://prepmaven.com/blog/wp-content/uploads/2023/10/Screenshot-2023-10-12-101500.png"
+# url = "https://prepmaven.com/blog/wp-content/uploads/2023/10/Screenshot-2023-10-12-101500.png"
 
 # try:
 #     # Load image from URL
@@ -524,435 +388,38 @@ url = "https://prepmaven.com/blog/wp-content/uploads/2023/10/Screenshot-2023-10-
 # except Exception as e:
 #         print(f"❌ Error: {str(e)}")
 
-response = eduverse.chat_template(url)
-print(response)
+# response = eduverse.chat_template(url)
+# print(response)
+# Give me 3 question of discrete maths on topic graph theory  which relevant in 2025
 
 
 def main():
-    pass
-import streamlit as st
-import torch
-from PIL import Image
-import requests
-from io import BytesIO
-import base64
-import time
+    st.title("EduVerse: Your Offline Learning Assistant")
+    st.write("Powered by Gemma 3n")
 
-# Configure page
-st.set_page_config(
-    page_title="EduVerse - AI Educational Assistant",
-    page_icon="🎓",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+    user_query = st.text_input("Enter your question or upload an image:")
+    uploaded_file = st.file_uploader("Or upload an image", type=["png", "jpg", "jpeg", "webp"])
 
-# Custom CSS for better styling
-st.markdown("""
-<style>
-    .main-header {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        text-align: center;
-    }
-    
-    .main-header h1 {
-        color: white;
-        margin: 0;
-        font-size: 2.5rem;
-    }
-    
-    .main-header p {
-        color: rgba(255,255,255,0.9);
-        margin: 0.5rem 0 0 0;
-        font-size: 1.1rem;
-    }
-    
-    .chat-container {
-        background: #f8f9ff;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        border: 1px solid #e1e5e9;
-    }
-    
-    .user-message {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 20px 20px 5px 20px;
-        margin: 1rem 0;
-        max-width: 80%;
-        margin-left: auto;
-        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
-    }
-    
-    .ai-message {
-        background: white;
-        color: #333;
-        padding: 1rem 1.5rem;
-        border-radius: 20px 20px 20px 5px;
-        margin: 1rem 0;
-        max-width: 80%;
-        border: 1px solid #e1e5e9;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .input-section {
-        background: white;
-        padding: 2rem;
-        border-radius: 15px;
-        border: 2px solid #f0f2f6;
-        margin: 2rem 0;
-    }
-    
-    .model-status {
-        padding: 1rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-        text-align: center;
-        font-weight: bold;
-    }
-    
-    .status-loading {
-        background: #fff3cd;
-        color: #856404;
-        border: 1px solid #ffeaa7;
-    }
-    
-    .status-ready {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    
-    .status-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-    
-    .image-preview {
-        border: 2px dashed #667eea;
-        border-radius: 10px;
-        padding: 1rem;
-        text-align: center;
-        margin: 1rem 0;
-        background: #f8f9ff;
-    }
-    
-    .feature-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        margin: 1rem 0;
-        border: 1px solid #e1e5e9;
-    }
-    
-    .stButton > button {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 25px;
-        padding: 0.75rem 2rem;
-        font-weight: bold;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Initialize session state
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
-
-if 'model_loaded' not in st.session_state:
-    st.session_state.model_loaded = False
-
-if 'eduverse_model' not in st.session_state:
-    st.session_state.eduverse_model = None
-
-# Header
-st.markdown("""
-<div class="main-header">
-    <h1>🎓 EduVerse AI Assistant</h1>
-    <p>Your AI-powered educational companion - Ask questions with text or images!</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Sidebar for model status and settings
-with st.sidebar:
-    st.title("🔧 Model Control")
-    
-    # Model status
-    if st.session_state.model_loaded:
-        st.markdown('<div class="model-status status-ready">✅ Model Ready</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="model-status status-loading">⏳ Model Not Loaded</div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Model loading section
-    st.subheader("🚀 Initialize Model")
-    
-    if st.button("🔄 Load EduVerse Model", type="primary"):
-        with st.spinner("Loading model... This may take a few minutes..."):
-            try:
-                # Here you would initialize your actual model
-                # For demo purposes, we'll simulate the loading
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                status_text.text("Initializing model...")
-                progress_bar.progress(25)
-                time.sleep(1)
-                
-                status_text.text("Loading tokenizer...")
-                progress_bar.progress(50)
-                time.sleep(1)
-                
-                status_text.text("Setting up EduVerse...")
-                progress_bar.progress(75)
-                time.sleep(1)
-                
-                status_text.text("Finalizing setup...")
-                progress_bar.progress(100)
-                time.sleep(0.5)
-                
-                # In your actual implementation, replace this with:
-                # d_type = torch.bfloat16
-                # st.session_state.eduverse_model = EduVerse(model, tokenizer, system_prompt, image_system_prompt, d_type)
-                
-                st.session_state.model_loaded = True
-                st.session_state.eduverse_model = "Model Loaded"  # Placeholder
-                
-                progress_bar.empty()
-                status_text.empty()
-                st.success("✅ Model loaded successfully!")
-                st.rerun()
-                
-            except Exception as e:
-                st.error(f"❌ Error loading model: {str(e)}")
-    
-    if st.session_state.model_loaded:
-        if st.button("🗑️ Unload Model"):
-            st.session_state.model_loaded = False
-            st.session_state.eduverse_model = None
-            st.success("Model unloaded successfully!")
-            st.rerun()
-    
-    st.markdown("---")
-    
-    # Settings
-    st.subheader("⚙️ Settings")
-    temperature = st.slider("Temperature", 0.1, 2.0, 0.7, 0.1)
-    max_tokens = st.slider("Max Tokens", 100, 2000, 500, 50)
-    
-    st.markdown("---")
-    
-    # Clear chat
-    if st.button("🧹 Clear Chat History"):
-        st.session_state.chat_history = []
-        st.rerun()
-
-# Main content area
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    # Chat history
-    st.subheader("💬 Conversation")
-    
-    if st.session_state.chat_history:
-        chat_container = st.container()
-        with chat_container:
-            for i, message in enumerate(st.session_state.chat_history):
-                if message["role"] == "user":
-                    st.markdown(f'<div class="user-message">👤 <strong>You:</strong><br>{message["content"]}</div>', 
-                               unsafe_allow_html=True)
-                    
-                    # Display image if present
-                    if "image" in message and message["image"]:
-                        st.image(message["image"], width=300, caption="Uploaded Image")
-                        
-                else:
-                    st.markdown(f'<div class="ai-message">🎓 <strong>EduVerse:</strong><br>{message["content"]}</div>', 
-                               unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="chat-container">
-            <h3>👋 Welcome to EduVerse!</h3>
-            <p>I'm your AI educational assistant. You can:</p>
-            <ul>
-                <li>📝 Ask questions about any subject</li>
-                <li>🖼️ Upload images for analysis and explanation</li>
-                <li>🔗 Share image URLs for me to examine</li>
-                <li>📚 Get help with homework, concepts, and learning</li>
-            </ul>
-            <p><strong>Start by loading the model in the sidebar, then ask me anything!</strong></p>
-        </div>
-        """, unsafe_allow_html=True)
-
-with col2:
-    # Input section
-    st.markdown('<div class="input-section">', unsafe_allow_html=True)
-    st.subheader("📝 Ask EduVerse")
-    
-    # Text input
-    user_input = st.text_area(
-        "Enter your question:",
-        placeholder="e.g., Explain photosynthesis, solve this math problem, what's in this image?",
-        height=100
-    )
-    
-    # Image input options
-    st.subheader("🖼️ Image Input")
-    
-    image_option = st.radio(
-        "Choose image input method:",
-        ["Upload Image", "Image URL", "No Image"]
-    )
-    
-    uploaded_image = None
-    image_url = None
-    
-    if image_option == "Upload Image":
-        uploaded_file = st.file_uploader(
-            "Choose an image file",
-            type=['png', 'jpg', 'jpeg', 'gif', 'bmp'],
-            help="Upload an image for analysis"
-        )
-        
-        if uploaded_file:
-            uploaded_image = Image.open(uploaded_file)
-            st.image(uploaded_image, caption="Uploaded Image", width=250)
-    
-    elif image_option == "Image URL":
-        image_url = st.text_input(
-            "Enter image URL:",
-            placeholder="https://example.com/image.jpg"
-        )
-        
-        if image_url:
-            try:
-                response = requests.get(image_url)
-                uploaded_image = Image.open(BytesIO(response.content))
-                st.image(uploaded_image, caption="Image from URL", width=250)
-            except Exception as e:
-                st.error(f"Failed to load image from URL: {str(e)}")
-    
-    # Submit button
-    if st.button("🚀 Send Message", type="primary", use_container_width=True):
-        if not st.session_state.model_loaded:
-            st.error("⚠️ Please load the model first using the sidebar!")
-        elif not user_input and not uploaded_image:
-            st.warning("⚠️ Please enter a question or upload an image!")
-        else:
-            # Add user message to chat history
-            user_message = {
-                "role": "user",
-                "content": user_input if user_input else "Please analyze this image",
-                "image": uploaded_image
-            }
-            st.session_state.chat_history.append(user_message)
-            
-            # Generate AI response
-            with st.spinner("🤔 EduVerse is thinking..."):
-                try:
-                    # In your actual implementation, replace this with:
-                    # if uploaded_image or image_url:
-                    #     response = st.session_state.eduverse_model.chat_template(image_url if image_url else uploaded_image)
-                    # else:
-                    #     response = st.session_state.eduverse_model.chat_template(user_input)
-                    
-                    # Simulated response for demo
-                    if uploaded_image:
-                        response = f"I can see the image you've uploaded. Based on what I observe, this appears to be an educational image that I can help analyze. You asked: '{user_input if user_input else 'Please analyze this image'}'\n\nThis is a simulated response. In the actual implementation, your EduVerse model would analyze the image and provide detailed educational insights."
-                    else:
-                        response = f"Thank you for your question: '{user_input}'\n\nThis is a simulated response. In the actual implementation, your EduVerse model would provide a comprehensive educational response based on your question."
-                    
-                    # Add AI response to chat history
-                    ai_message = {
-                        "role": "assistant",
-                        "content": response
-                    }
-                    st.session_state.chat_history.append(ai_message)
-                    
-                except Exception as e:
-                    st.error(f"❌ Error generating response: {str(e)}")
-            
-            st.rerun()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# Footer with example prompts
-st.markdown("---")
-st.subheader("💡 Example Prompts")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.markdown("""
-    <div class="feature-card">
-        <h4>📚 Text Questions</h4>
-        <ul>
-            <li>"Explain quantum physics simply"</li>
-            <li>"Solve: 2x + 5 = 13"</li>
-            <li>"What is photosynthesis?"</li>
-            <li>"Help me write an essay"</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown("""
-    <div class="feature-card">
-        <h4>🖼️ Image Analysis</h4>
-        <ul>
-            <li>Math problems from textbooks</li>
-            <li>Scientific diagrams</li>
-            <li>Historical documents</li>
-            <li>Charts and graphs</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown("""
-    <div class="feature-card">
-        <h4>🎯 Learning Support</h4>
-        <ul>
-            <li>"Break down this concept"</li>
-            <li>"Create practice problems"</li>
-            <li>"Explain step by step"</li>
-            <li>"What's the real-world use?"</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Instructions for actual implementation
-st.markdown("---")
-st.info("""
-**🔧 Implementation Notes:**
-
-To integrate with your actual EduVerse model, replace the simulated model loading and response generation sections with:
-
-```python
-# In the model loading section:
-d_type = torch.bfloat16
-st.session_state.eduverse_model = EduVerse(model, tokenizer, system_prompt, image_system_prompt, d_type)
-
-# In the response generation section:
-if uploaded_image or image_url:
-    response = st.session_state.eduverse_model.chat_template(image_url if image_url else uploaded_image)
-else:
-    response = st.session_state.eduverse_model.chat_template(user_input)
-```
-""")
+    if user_query or uploaded_file:
+        try:
+            print("Initializing Model...")
+            eduverse = EduVerse(model, tokenizer, system_prompt, image_system_prompt, torch.bfloat16)
+            print("Loading model... This may take a few minutes on first run.")
+            print("✅ Model loaded successfully!")
+            st.write("✅ Model loaded successfully!")
+            if user_query:
+                response = eduverse.chat_template(user_query)
+                st.write("Response:")
+                st.write(response)
+            elif uploaded_file:
+                image = Image.open(uploaded_file)
+                image = eduverse.preprocess_image(image)
+                response = eduverse.chat_template(uploaded_file.name)
+                st.image(image, caption="Uploaded Image", use_column_width=True)
+                st.write("Response:")
+                st.write(response)
+        except Exception as e:
+            st.error(f"Error processing your request: {str(e)}")
 
 
 if __name__ == "__main__":
