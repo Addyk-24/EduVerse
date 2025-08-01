@@ -72,7 +72,7 @@ EduVerse bridges this gap by providing an **AI-powered educational assistant tha
 - Python 3.8 or higher
 - 8GB RAM minimum (16GB recommended)
 - 50GB available storage
-- 
+
 ### Installation
 
 1. **Clone the repository:**
