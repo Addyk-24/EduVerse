@@ -65,7 +65,6 @@ EduVerse bridges this gap by providing an **AI-powered educational assistant tha
 
 - **AI Model**: Gemma 3n (27B parameters)
 - **Backend**: Python with transformers
-- **Database**: SQLite for offline data storage
 
 ## 📦 Quick Start
 
@@ -86,19 +85,7 @@ cd EduVerse
 ```bash
 pip install -r requirements.txt
 ```
-
-4. **Create EduVerse model:**
-```bash
-# Create custom model with our educational prompt
-ollama create EduVerse -f Modelfile
-```
-
-5. **Initialize the database:**
-```bash
-python setup_database.py
-```
-
-6. **Run the application:**
+3. **Run the application:**
 ```bash
 streamlit run app.py
 ```
@@ -154,66 +141,65 @@ Upload student work → Receive detailed analysis:
 - Parent communication suggestions
 ```
 
-## 📁 Project Structure
+## 🌟 Challenges faced
 
-```
-EduVerse/
-├── 📄 README.md
-├── 📄 requirements.txt
-├── 📄 Modelfile                 # Ollama model configuration
-├── 🐍 app.py                    # Main Streamlit application
-├── 🐍 setup_database.py         # Database initialization
-├── 📁 src/
-│   ├── 🐍 core/
-│   │   ├── 🐍 adaptive_engine.py    # Adaptive learning algorithms
-│   │   ├── 🐍 socratic_tutor.py     # Socratic questioning logic
-│   │   └── 🐍 cultural_adapter.py   # Cultural context adaptation
-│   ├── 🐍 generators/
-│   │   ├── 🐍 problem_generator.py  # Dynamic problem creation
-│   │   ├── 🐍 lesson_planner.py     # Lesson plan generation
-│   │   └── 🐍 assessment_tracker.py # Progress tracking
-│   └── 🐍 utils/
-│       ├── 🐍 database.py           # Database operations
-│       └── 🐍 ollama_client.py      # Ollama API wrapper
-├── 📁 data/
-│   ├── 📁 training/                 # Fine-tuning datasets
-│   ├── 📁 cultural_contexts/        # Regional adaptation data
-│   └── 📁 curriculum_standards/     # Educational standards by country
-├── 📁 tests/
-│   ├── 🐍 test_adaptive_engine.py
-│   ├── 🐍 test_problem_generator.py
-│   └── 🐍 test_cultural_adapter.py
-└── 📁 docs/
-    ├── 📄 deployment_guide.md
-    ├── 📄 cultural_adaptation.md
-    └── 📄 teacher_training.md
-```
+1. 🌐 Lack of Internet Dependency
 
-## 🌟 Core Components
+    Challenge: Running large language models (LLMs) like Gemma 3n in an offline environment.
 
+    Solution: Used quantized versions, optimized runtimes (GGUF, ONNX), and model distillation to fit within resource-constrained devices.
+
+2. 💾 Limited Hardware Resources
+   
+    Challenge: Most rural areas only have access to low-end devices with limited CPU/GPU and RAM.
+
+    Solution: static compilation to reduce memory footprint.
+
+4. 🧠 Real-Time Adaptivity Without Cloud
+
+   Challenge: Adapting lessons in real time typically relies on server-backed AI models.
+
+    Solution: Embedded mini-engines using distilled transformers that adapt locally based on cached learning progress.
+
+5. 🗣️ Contextual Content Generation
+
+   Challenge: Generating examples or problems relevant to a student’s region, language, or curriculum without internet access.
+
+    Solution: Built a local knowledge base with region-specific datasets (e.g., rural economy, agriculture), and fine-tuned prompts for localized responses.
+
+6. 📊 Images tensor being saved has null or nan value
+
+   Challenge: When processing the image, the tensor were have value of null or nan 
+
+    Solution: Used sampling, clamp and normalize logits and Replace NaN/inf values
+
+7. 🔐 Model Fragmentation Across Devices
+
+    Challenge: Memory fragmentation and multi-GPU inconsistencies with mixed-precision models.
+
+    Solution: Used accelerate with device_map="balanced_low_0" and offloaded parts to CPU where needed. Also handled CUDA errors and fallback logic.
+
+8. 🧪 Evaluation Without Benchmarks
+
+   Challenge: No standard datasets exist for offline personalized education systems.
+
+    Solution: Created custom test cases, offline simulation environments, and used teacher feedback for evaluation.
 
 
 ## 🎨 User Interface
 
-### Student Dashboard
-- **📊 Progress Overview**: Visual learning progress and achievements
+<img width="754" height="502" alt="UI" src="https://github.com/user-attachments/assets/6eb0cb7e-22c7-4403-98b5-1df2876c4282" />
+
+### Student 
 - **📚 Subject Selection**: Easy navigation between subjects
 - **🎯 Practice Mode**: Unlimited problems with instant feedback
 - **🤝 Tutor Chat**: Conversational learning with AI guide
-- **📈 Performance Analytics**: Detailed insights into learning patterns
 
-### Teacher Dashboard
-- **👥 Class Management**: Track multiple students' progress
+### Teacher 
 - **📋 Lesson Planning**: Generate and customize lesson plans
 - **📊 Analytics**: Class performance insights and recommendations
 - **📝 Content Creation**: Create custom exercises and assessments
-- **👨‍👩‍👧‍👦 Parent Communication**: Generate progress reports
 
-### Admin Panel
-- **⚙️ System Configuration**: Customize for local needs
-- **🌏 Cultural Settings**: Adapt interface and content
-- **📦 Model Management**: Handle AI model updates
-- **📊 Usage Analytics**: System performance monitoring
 
 ## 🌐 Cultural Adaptation
 
@@ -221,4 +207,9 @@ EduVerse automatically adapts content for different regions:
 
 ### Supported Contexts
 - **🌾 Rural farming communities** (Kenya, Tanzania, India, etc.)
-- **🏪 Trading/market towns** (West Afric
+- **🏪 Trading/market towns** (West Africa)
+
+## YOUTUBE VIDEO
+
+[YOUTUBE VIDEO](https://youtu.be/E99L5BXhrmA)
+
