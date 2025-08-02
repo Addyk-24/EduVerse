@@ -3,6 +3,9 @@ from transformers import AutoModelForImageTextToText, AutoTokenizer,pipeline
 import torch
 import logging
 import transformers
+from transformers import LogitsProcessor
+from transformers import LogitsProcessorList
+
 
 import requests
 from PIL import Image
@@ -21,26 +24,26 @@ model_name = "google/gemma-3n-E4B-it"
 
 logger = logging.getLogger(__name__)
 
-# tokenizer = AutoTokenizer.from_pretrained(model_name)
-# model = AutoModelForImageTextToText.from_pretrained(
-#     model_name,
-#     torch_dtype=torch.float16,
-#     device_map= torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# )
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForImageTextToText.from_pretrained(
+    model_name,
+    torch_dtype=torch.float16,
+    device_map= torch.device("cuda" if torch.cuda.is_available() else "cpu")
+)
 
-@st.cache_resource(show_spinner="Loading model...")
-def load_model_and_tokenizer():
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForImageTextToText.from_pretrained(
-        model_name,
-        # torch_dtype=torch.float16,
-        torch_dtype=torch.float32,
-        device_map= torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    )
-    return model, tokenizer
+# @st.cache_resource(show_spinner="Loading model...")
+# def load_model_and_tokenizer():
+#     tokenizer = AutoTokenizer.from_pretrained(model_name)
+#     model = AutoModelForImageTextToText.from_pretrained(
+#         model_name,
+#         # torch_dtype=torch.float16,
+#         torch_dtype=torch.float32,
+#         device_map= torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#     )
+#     return model, tokenizer
 
 # Load model and tokenizer
-model, tokenizer = load_model_and_tokenizer()
+# model, tokenizer = load_model_and_tokenizer()
 
 system_prompt = """
 You are EduVerse, an AI educational assistant for low-connectivity regions. 
@@ -195,6 +198,27 @@ def load_image_from_url(url: str) -> Image.Image:
         logger.error(f"Error loading image from URL: {str(e)}")
         raise
 
+# class safeLogitWarper(LogitsProcessor):
+#     def __init__(self,temperature=1.0):
+#         self.temperature = temperature
+#     def __call__(self,input_ids,probs):
+#         probs = torch.clamp(probs,min=-1e8,max=1e8)
+#         probs = probs / self.temperature
+
+#         # Compute softmax and clamp probs
+#         probs = torch.softmax(probs, dim=-1)
+#         probs = torch.clamp(probs, min=1e-8, max=1.0)
+#         probs = torch.nan_to_num(probs, nan=1e-8, posinf=1.0, neginf=1e-8)
+
+#         # Ensure no NaN, Inf, or negative values
+#         if torch.any(torch.isnan(probs)) or torch.any(torch.isinf(probs)) or torch.any(probs < 0):
+#             probs = torch.ones_like(probs) / probs.size(-1)
+        
+#         # Re-convert probs back to logits
+#         probs = torch.log(probs)
+
+#         return probs
+
 
 class EduVerse:
     def __init__(self,model,tokenizer,system_prompt,image_system_prompt,d_type):
@@ -281,6 +305,7 @@ class EduVerse:
             raise ValueError(f"Unsupported input type: {input_type}")
     
 
+
     def message_template(self,input_type, formatted_input):
         """       Prepares messages with system prompt and user query based on input type."""
 
@@ -353,6 +378,7 @@ class EduVerse:
         output = self.model.generate(
             **input,
             max_new_tokens=max_tokens,
+            # logits_warper=LogitsProcessorList([safeLogitWarper(temperature=0.8)]),
             disable_compile=True
     )
         response = self.processor.batch_decode(output[:,input_len:],skip_special_tokens=True)[0]
@@ -360,14 +386,14 @@ class EduVerse:
         return response
 
 
-# d_type = torch.bfloat16
+d_type = torch.bfloat16
+# d_type = torch.bfloat32
 
-# # Initialize and load the model
-# print("Initializing Model...")
-# print("Loading model... This may take a few minutes on first run.")
-# eduverse = EduVerse(model,tokenizer, system_prompt,image_system_prompt,d_type)
-
-# print("✅ Model loaded successfully!")
+# Initialize and load the model
+print("Initializing Model...")
+print("Loading model... This may take a few minutes on first run.")
+eduverse = EduVerse(model,tokenizer, system_prompt,image_system_prompt,d_type)
+print("✅ Model loaded successfully!")
 
 
 # Text usage example
