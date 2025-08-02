@@ -33,7 +33,8 @@ def load_model_and_tokenizer():
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForImageTextToText.from_pretrained(
         model_name,
-        torch_dtype=torch.float16,
+        # torch_dtype=torch.float16,
+        torch_dtype=torch.float32,
         device_map= torch.device("cuda" if torch.cuda.is_available() else "cpu")
     )
     return model, tokenizer
@@ -371,14 +372,14 @@ class EduVerse:
 
 # Text usage example
 
-# prompt = "List me all countries in the world and their capitals."
+# prompt = "Give me 3 question of discrete maths on topic graph theory  which relevant in 2025"
 # response = eduverse.chat_template(prompt)
 # print(response)
 
 
 # Image usage Example
 # url = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaJe2EQLw6UKqefBco4J_Z-1kxb3NI5ee1tA&s"
-# url = "https://prepmaven.com/blog/wp-content/uploads/2023/10/Screenshot-2023-10-12-101500.png"
+url = "https://prepmaven.com/blog/wp-content/uploads/2023/10/Screenshot-2023-10-12-101500.png"
 
 # try:
 #     # Load image from URL
@@ -388,40 +389,39 @@ class EduVerse:
 # except Exception as e:
 #         print(f"❌ Error: {str(e)}")
 
-# response = eduverse.chat_template(url)
-# print(response)
-# Give me 3 question of discrete maths on topic graph theory  which relevant in 2025
+response = eduverse.chat_template(url)
+print(response)
 
 
-def main():
-    st.title("EduVerse: Your Offline Learning Assistant")
-    st.write("Powered by Gemma 3n")
+# def main():
+#     st.title("EduVerse: Your Offline Learning Assistant")
+#     st.write("Powered by Gemma 3n")
 
-    user_query = st.text_input("Enter your question or upload an image:")
-    uploaded_file = st.file_uploader("Or upload an image", type=["png", "jpg", "jpeg", "webp"])
+#     user_query = st.text_input("Enter your question or upload an image:")
+#     uploaded_file = st.file_uploader("Or upload an image", type=["png", "jpg", "jpeg", "webp"])
 
-    if user_query or uploaded_file:
-        try:
-            print("Initializing Model...")
-            eduverse = EduVerse(model, tokenizer, system_prompt, image_system_prompt, torch.bfloat16)
-            print("Loading model... This may take a few minutes on first run.")
-            print("✅ Model loaded successfully!")
-            st.write("✅ Model loaded successfully!")
-            if user_query:
-                response = eduverse.chat_template(user_query)
-                st.write("Response:")
-                st.write(response)
-            elif uploaded_file:
-                image = Image.open(uploaded_file)
-                image = eduverse.preprocess_image(image)
-                response = eduverse.chat_template(uploaded_file.name)
-                st.image(image, caption="Uploaded Image", use_column_width=True)
-                st.write("Response:")
-                st.write(response)
-        except Exception as e:
-            st.error(f"Error processing your request: {str(e)}")
+#     if user_query or uploaded_file:
+#         try:
+#             print("Initializing Model...")
+#             eduverse = EduVerse(model, tokenizer, system_prompt, image_system_prompt, torch.bfloat16)
+#             print("Loading model... This may take a few minutes on first run.")
+#             print("✅ Model loaded successfully!")
+#             st.write("✅ Model loaded successfully!")
+#             if user_query:
+#                 response = eduverse.chat_template(user_query)
+#                 st.write("Response:")
+#                 st.write(response)
+#             elif uploaded_file:
+#                 image = Image.open(uploaded_file)
+#                 image = eduverse.preprocess_image(image)
+#                 response = eduverse.chat_template(uploaded_file.name)
+#                 st.image(image, caption="Uploaded Image", use_column_width=True)
+#                 st.write("Response:")
+#                 st.write(response)
+#         except Exception as e:
+#             st.error(f"Error processing your request: {str(e)}")
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
     
