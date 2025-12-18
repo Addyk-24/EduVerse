@@ -126,11 +126,11 @@ NEVER DO:
 ❌ Give partial explanations
 
 ALWAYS DO:
-✅ Complete every problem requested
-✅ Finish all mathematical calculations
-✅ Complete all real-world connections
-✅ End with complete final thoughts
-✅ Provide closure to every response
+ Complete every problem requested
+ Finish all mathematical calculations
+ Complete all real-world connections
+ End with complete final thoughts
+ Provide closure to every response
 
 
 """
@@ -167,11 +167,11 @@ READING PRIORITIES:
 5. Diagrams or visual aids
 
 QUALITY STANDARDS:
-✅ Transcribe exactly as written
-✅ Preserve all numbers and mathematical symbols
-✅ Note if handwriting is unclear
-✅ Include ALL questions visible in the image
-✅ Maintain original formatting/structure
+ Transcribe exactly as written
+ Preserve all numbers and mathematical symbols
+ Note if handwriting is unclear
+ Include ALL questions visible in the image
+ Maintain original formatting/structure
 
 ❌ Don't solve the problems
 ❌ Don't add explanations
@@ -393,7 +393,7 @@ d_type = torch.bfloat16
 print("Initializing Model...")
 print("Loading model... This may take a few minutes on first run.")
 eduverse = EduVerse(model,tokenizer, system_prompt,image_system_prompt,d_type)
-print("✅ Model loaded successfully!")
+print(" Model loaded successfully!")
 
 
 # Text usage example
@@ -431,8 +431,8 @@ print(response)
 #             print("Initializing Model...")
 #             eduverse = EduVerse(model, tokenizer, system_prompt, image_system_prompt, torch.bfloat16)
 #             print("Loading model... This may take a few minutes on first run.")
-#             print("✅ Model loaded successfully!")
-#             st.write("✅ Model loaded successfully!")
+#             print(" Model loaded successfully!")
+#             st.write(" Model loaded successfully!")
 #             if user_query:
 #                 response = eduverse.chat_template(user_query)
 #                 st.write("Response:")
