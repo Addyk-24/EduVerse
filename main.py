@@ -6,6 +6,10 @@ import transformers
 from transformers import LogitsProcessor
 from transformers import LogitsProcessorList
 
+from transformers import TextIteratorStreamer
+from threading import Thread
+
+from model_components.model_manager import model_cache
 
 import requests
 from PIL import Image
@@ -77,11 +81,11 @@ CONTEXT ADAPTATION:
 - Connect to modern applications
 
 COMPLETION CHECKLIST - Before ending response, verify:
-✓ All requested problems included
-✓ All solutions completely worked out
-✓ All applications fully explained
-✓ All sentences finished
-✓ No incomplete thoughts or cutoffs
+- All requested problems included
+- All solutions completely worked out
+- All applications fully explained
+- All sentences finished
+- No incomplete thoughts or cutoffs
 
 SOCRATIC METHOD:
 When tutoring, ask guiding questions but ALWAYS complete your questioning sequence and provide closure to the learning moment.
@@ -119,18 +123,18 @@ LENGTH REQUIREMENT:
 - Respect local educational hierarchies and customs
 
 NEVER DO:
-❌ Stop mid-calculation
-❌ Leave solutions unfinished  
-❌ End with incomplete sentences
-❌ Provide fewer problems than requested
-❌ Give partial explanations
+- Stop mid-calculation
+- Leave solutions unfinished  
+- End with incomplete sentences
+- Provide fewer problems than requested
+- Give partial explanations
 
 ALWAYS DO:
-✅ Complete every problem requested
-✅ Finish all mathematical calculations
-✅ Complete all real-world connections
-✅ End with complete final thoughts
-✅ Provide closure to every response
+- Complete every problem requested
+- Finish all mathematical calculations
+- Complete all real-world connections
+- End with complete final thoughts
+- Provide closure to every response
 
 
 """
@@ -167,16 +171,16 @@ READING PRIORITIES:
 5. Diagrams or visual aids
 
 QUALITY STANDARDS:
-✅ Transcribe exactly as written
-✅ Preserve all numbers and mathematical symbols
-✅ Note if handwriting is unclear
-✅ Include ALL questions visible in the image
-✅ Maintain original formatting/structure
+ Transcribe exactly as written
+ Preserve all numbers and mathematical symbols
+ Note if handwriting is unclear
+ Include ALL questions visible in the image
+ Maintain original formatting/structure
 
-❌ Don't solve the problems
-❌ Don't add explanations
-❌ Don't correct grammar/spelling errors
-❌ Don't skip partial questions
+ Don't solve the problems
+ Don't add explanations
+ Don't correct grammar/spelling errors
+ Don't skip partial questions
 
 UNCERTAINTY HANDLING:
 - For unclear text: "[unclear text]" 
@@ -222,59 +226,67 @@ def load_image_from_url(url: str) -> Image.Image:
 
 class EduVerse:
     def __init__(self,model,tokenizer,system_prompt,image_system_prompt,d_type):
-        self.model = model
-        self.tokenizer = tokenizer
+        self.model = model_cache.get_model()
+        self.tokenizer = model_cache.get_tokenizer()
         self.system_prompt = system_prompt
         self.image_system_prompt = image_system_prompt
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = AutoProcessor.from_pretrained(model_name)
         self.d_type = d_type
+        self.conversation_history = []
+
     
     def preprocess_image(self,image: Image.Image) -> Image.Image:
         """ Resize and converting image to RGB """ 
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+        try:
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
 
-        # resize the image to Gemma 3n accepted size ie 512x512
-        target_size = (512,512)
-        # Calculate aspect ratio preserving resize
-        original_width, original_height = image.size
-        aspect_ratio = original_width / original_height
-        if aspect_ratio > 1:
-            # Width is larger
-            new_width = target_size[0]
-            new_height = int(target_size[0] / aspect_ratio)
-        else:
-            # Height is larger or equal
-            new_height = target_size[1]
-            new_width = int(target_size[1] * aspect_ratio)
-        # Resize image maintaining aspect ratio
-        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            # resize the image to Gemma 3n accepted size ie 512x512
+            target_size = (512,512)
+            # Calculate aspect ratio preserving resize
+            original_width, original_height = image.size
+            aspect_ratio = original_width / original_height
+            if aspect_ratio > 1:
+                # Width is larger
+                new_width = target_size[0]
+                new_height = int(target_size[0] / aspect_ratio)
+            else:
+                # Height is larger or equal
+                new_height = target_size[1]
+                new_width = int(target_size[1] * aspect_ratio)
+            # Resize image maintaining aspect ratio
+            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-        # Create a new image with target size and paste the resized image
-        processed_image = Image.new(
-            "RGB", target_size, (255, 255, 255)
-        )  # White background
+            # Create a new image with target size and paste the resized image
+            processed_image = Image.new(
+                "RGB", target_size, (255, 255, 255)
+            )  # White background
 
-        # Calculate position to center the image
-        x_offset = (target_size[0] - new_width) // 2
-        y_offset = (target_size[1] - new_height) // 2
+            # Calculate position to center the image
+            x_offset = (target_size[0] - new_width) // 2
+            y_offset = (target_size[1] - new_height) // 2
 
-        processed_image.paste(image, (x_offset, y_offset))
+            processed_image.paste(image, (x_offset, y_offset))
 
-        return processed_image
+            return processed_image
+        except Exception as e:
+            raise ValueError(f"Error in image preprocessing: {e}")
     
     # Detection of input type
     def detect_input_type(self,input_data):
-        if isinstance(input_data, str) and input_data.endswith(('.png', '.jpg', '.jpeg','webp')):
-            # if user_query is path to an image. load image
-            return "image"
-        elif isinstance(input_data, str) and input_data.startswith(("http://", "https://")):
-            return "image"
-        elif isinstance(input_data,str) and input_data.endswith(('.mp4', '.avi', '.mov')):
-            print("Video input is not supported yet. Please provide an image or text query.")
-        else:
-            return "text"
+        try:
+            if isinstance(input_data, str) and input_data.endswith(('.png', '.jpg', '.jpeg','webp')):
+                # if user_query is path to an image. load image
+                return "image"
+            elif isinstance(input_data, str) and input_data.startswith(("http://", "https://")):
+                return "image"
+            elif isinstance(input_data,str) and input_data.endswith(('.mp4', '.avi', '.mov')):
+                print("Video input is not supported yet. Please provide an image or text query.")
+            else:
+                return "text"
+        except Exception as e:
+            raise ValueError(f"Error detecting input type: {e}")
     
 
     def format_input_type(self,input_type, raw_input):
@@ -282,109 +294,203 @@ class EduVerse:
         Formats input data for image, audio (simulated), or text.
         Supports both local paths and URLs for images. Displays image if loaded.
         """
-        # input_type = self.detect_input_type(raw_input)
-        if input_type == "image":   
-            try:
-                if raw_input.startswith("http://") or raw_input.startswith("https://"):
-                    response = requests.get(raw_input)
-                    response.raise_for_status()
-                    image = Image.open(BytesIO(response.content))
-                    image = self.preprocess_image(image)
-                else:
-                    image = Image.open(raw_input)
-                    image = self.preprocess_image(image)
-                
-                print("Image Loaded")
-                # Return the processed image
-                return image
-            except Exception as e:
-                raise ValueError(f"Failed to load image from {raw_input}: {e}")
-        elif input_type == "text":
-            return raw_input
-        else:
-            raise ValueError(f"Unsupported input type: {input_type}")
+        try:
+
+            # input_type = self.detect_input_type(raw_input)
+            if input_type == "image":   
+                try:
+                    if raw_input.startswith("http://") or raw_input.startswith("https://"):
+                        response = requests.get(raw_input)
+                        response.raise_for_status()
+                        image = Image.open(BytesIO(response.content))
+                        image = self.preprocess_image(image)
+                    else:
+                        image = Image.open(raw_input)
+                        image = self.preprocess_image(image)
+                    
+                    print("Image Loaded")
+                    # Return the processed image
+                    return image
+                except Exception as e:
+                    raise ValueError(f"Failed to load image from {raw_input}: {e}")
+            elif input_type == "text":
+                return raw_input
+            else:
+                raise ValueError(f"Unsupported input type: {input_type}")
+        except Exception as e:
+            raise ValueError(f"Error detecting input type: {e}")
     
+    def add_to_history(self,role, content, content_type):
+        self.conversation_history.append({
+            "role": role,
+            "content": {
+                "type": content_type,
+                "text": content
+            }
+        })
+    def get_conversation_context(self,max_turns=10):
+        """ Retrieve recent history messages"""
+        try:
+            if len(self.conversation_history) > max_turns:
+                return self.conversation_history[-max_turns:]
+            else:
+                return self.conversation_history
+        except Exception as e:
+            raise ValueError(f"Error retrieving conversation context: {e}")
 
+    def message_template(self,input_type, formatted_input,include_history=True):
+        """Prepares messages with system prompt and user query based on input type."""
 
-    def message_template(self,input_type, formatted_input):
-        """       Prepares messages with system prompt and user query based on input type."""
+        try:
+            messages = []
 
-
-        if input_type == "text":
-            messages = [
-
-            {
-                "role": "user", "content": [
-                    {
-                        "type": "text", "text": f"User Query:{formatted_input}" ,
-                    }
-                
-            ]
-            },
-            {
-                "role": "assistant", "content": 
-             [
+            if include_history and self.conversation_history:
+                for history in self.get_conversation_context():
+                                messages.append({
+                                    "role": history["role"],
+                                    "content": [{"type": history["content"]["type"], 
+                                                 "text" if history["content"]["type"] == "text" else "image": 
+                                                 history["content"]["text"]}]
+                                                 })
+            if input_type == "text":
+                messages.append(
                 {
-                    "type": "text","text": self.system_prompt
+                    "role": "user", "content": [
+                        {
+                            "type": "text", "text": f"User Query:{formatted_input}" ,
+                        }
+                    
+                ]
                 },
-             ]
-            }
-        ]
-            return messages
-        else: 
-            messages = [
-
-            {
-                "role": "user", "content": [
-                    {
-                        "type": "image", "image": formatted_input 
-                    },
-                
-            ]
-            },
-            {
-                "role": "assistant", "content": 
-             [
                 {
-                    "type": "text","text": self.image_system_prompt,
-
+                    "role": "assistant", "content": 
+                [
+                    {
+                        "type": "text","text": self.system_prompt
+                    },
+                ]
                 }
-             ]
-            }
-            ]
-            return messages
+)
+                return messages
+            
+            else: 
+                messages.append(
+                {
+                    "role": "user", "content": [
+                        {
+                            "type": "image", "image": formatted_input 
+                        },
+                    
+                ]
+                },
+                {
+                    "role": "assistant", "content": 
+                [
+                    {
+                        "type": "text","text": self.image_system_prompt,
+
+                    }
+                ]
+                }
+                )
+                return messages
+        except Exception as e:
+            raise ValueError(f"Error detecting input type: {e}")
         
+        
+
     def chat_template(self,user_query: str,max_tokens = 2000 ):
         """ Prepare messages with system prompt and user query"""
+        try:
+            input_type = self.detect_input_type(user_query)
+            print(f"Detected input type: {input_type}")
 
-        input_type = self.detect_input_type(user_query)
-        print(f"Detected input type: {input_type}")
 
-        formatted_input = self.format_input_type(input_type, user_query)
+            formatted_input = self.format_input_type(input_type, user_query)
 
-        messages = self.message_template(input_type, formatted_input)
-        # Apply chat template
+            messages = self.message_template(input_type, formatted_input)
+            
+            # Apply chat template
 
-        input = self.processor.apply_chat_template(
-            messages,
-            add_generation_prompt=True,
-            tokenize=True,
-            return_dict=True,
-            return_tensors="pt"
-        ).to(self.model.device)
+            input = self.processor.apply_chat_template(
+                messages,
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True,
+                return_tensors="pt"
+            ).to(self.model.device)
 
-        input_len = input["input_ids"].shape[-1]
+            input_len = input["input_ids"].shape[-1]
 
-        output = self.model.generate(
-            **input,
-            max_new_tokens=max_tokens,
-            # logits_warper=LogitsProcessorList([safeLogitWarper(temperature=0.8)]),
-            disable_compile=True
-    )
-        response = self.processor.batch_decode(output[:,input_len:],skip_special_tokens=True)[0]
+            output = self.model.generate(
+                **input,
+                max_new_tokens=max_tokens,
+                # logits_warper=LogitsProcessorList([safeLogitWarper(temperature=0.8)]),
+                disable_compile=True
+            )
+            response = self.processor.batch_decode(output[:,input_len:],skip_special_tokens=True)[0]
 
-        return response
+            self.add_to_history("user",user_query,input_type)
+            self.add_to_history("assistant",response,"text")
 
+
+            return response
+        
+        except Exception as e:
+            raise ValueError(f"Error detecting input type: {e}")
+    
+    def chat_template_streaming(self,user_query:str,max_tokens=2000):
+        """ Prepare messages with system prompt and user query woth streaming """
+        try:
+            input_type = self.detect_input_type(user_query)
+            print(f"Detected input type: {input_type}")
+
+            formatted_input = self.format_input_type(input_type,user_query)
+
+            messages = self.message_template(input_type, formatted_input)
+
+            input = self.processor.apply_chat_template(
+                messages,
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True,
+                return_tensors="pt"
+            ).to(self.model.device)
+
+            streamer = TextIteratorStreamer(
+                self.tokenizer, 
+                skip_special_tokens=True,
+                skip_prompt=True
+                )
+            
+            
+            generation_kwargs = {
+                **input,
+                "max_new_tokens": max_tokens,
+                "streamer": streamer,
+                "disable_compile": True
+            }
+
+
+            # Generate in separate thread
+            thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+            thread.start()
+
+            full_response = ""
+            for new_text in streamer:
+                full_response +=new_text
+                yield new_text
+
+            thread.join()
+
+            self.add_to_history("user",user_query,input_type)
+            self.add_to_history("assistant",full_response,"text")
+
+        except Exception as e:
+            raise ValueError(f"Error: {e}")
+        
+
+        
 
 d_type = torch.bfloat16
 # d_type = torch.bfloat32
@@ -393,7 +499,7 @@ d_type = torch.bfloat16
 print("Initializing Model...")
 print("Loading model... This may take a few minutes on first run.")
 eduverse = EduVerse(model,tokenizer, system_prompt,image_system_prompt,d_type)
-print("✅ Model loaded successfully!")
+print("->>> Model loaded successfully!")
 
 
 # Text usage example
@@ -413,7 +519,7 @@ url = "https://prepmaven.com/blog/wp-content/uploads/2023/10/Screenshot-2023-10-
 #     display(image)
 
 # except Exception as e:
-#         print(f"❌ Error: {str(e)}")
+#         print(f" Error: {str(e)}")
 
 response = eduverse.chat_template(url)
 print(response)
@@ -431,8 +537,8 @@ print(response)
 #             print("Initializing Model...")
 #             eduverse = EduVerse(model, tokenizer, system_prompt, image_system_prompt, torch.bfloat16)
 #             print("Loading model... This may take a few minutes on first run.")
-#             print("✅ Model loaded successfully!")
-#             st.write("✅ Model loaded successfully!")
+#             print(" Model loaded successfully!")
+#             st.write(" Model loaded successfully!")
 #             if user_query:
 #                 response = eduverse.chat_template(user_query)
 #                 st.write("Response:")
